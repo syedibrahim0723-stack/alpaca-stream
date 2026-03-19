@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ Alpaca Live Stream</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0d1117;
+      --card:     #161b22;
+      --card2:    #1c2128;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --dim:      #8b949e;
+      --green:    #3fb950;
+      --red:      #f85149;
+      --blue:     #58a6ff;
+      --teal:     #39d353;
+      --yellow:   #d29922;
+      --orange:   #db6d28;
+      --purple:   #bc8cff;
+    }
+    html, body { height: 100%; overflow: hidden;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 9px 18px;
+      background: var(--card); border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .logo { font-size: 16px; font-weight: 700; color: var(--blue); letter-spacing: -.3px; }
+    .logo span { color: var(--dim); font-weight: 400; }
+    .logo sup  { font-size: 9px; color: var(--teal); vertical-align: super; }
+    .filter-badge {
+      font-size: 10px; padding: 2px 9px; border-radius: 10px;
+      background: rgba(188,140,255,.12); color: var(--purple);
+      border: 1px solid rgba(188,140,255,.3); letter-spacing: .4px;
+    }
+    #status {
+      margin-left: auto; font-size: 11px; font-weight: 700;
+      letter-spacing: .6px; padding: 3px 11px; border-radius: 20px;
+    }
+    #status.connected    { background: rgba(63,185,80,.12);  color: var(--green); }
+    #status.disconnected { background: rgba(248,81,73,.12);  color: var(--red);   }
+    #status.connecting   { background: rgba(88,166,255,.12); color: var(--blue);  }
+
+    /* ── Stats bar ──────────────────────────────────────────────────────── */
+    .stats-bar {
+      display: flex; flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat {
+      flex: 1; padding: 7px 16px; text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val {
+      font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums;
+      font-family: 'Courier New', monospace; line-height: 1.2;
+    }
+    .stat-val.g { color: var(--green); }
+    .stat-val.b { color: var(--blue);  }
+    .stat-val.o { color: var(--orange);}
+    .stat-val.r { color: var(--red);   }
+    .stat-label { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-top: 1px; }
+
+    /* ── Main 3-column ──────────────────────────────────────────────────── */
+    .main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+    /* ── Column shared ──────────────────────────────────────────────────── */
+    .col { display: flex; flex-direction: column; overflow: hidden; }
+    .panel-hdr {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 12px; background: var(--card);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px; font-weight: 600; color: var(--dim);
+      text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .dot-live {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* ── Col 1: Live trades ─────────────────────────────────────────────── */
+    .col-trades { width: 310px; border-right: 1px solid var(--border); }
+    .tbl-wrap {
+      overflow-y: auto; flex: 1;
+    }
+    .tbl-wrap::-webkit-scrollbar { width: 3px; }
+    .tbl-wrap::-webkit-scrollbar-track { background: var(--bg); }
+    .tbl-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    table { width: 100%; border-collapse: collapse; font-family: 'Courier New', monospace; font-size: 11.5px; }
+    thead th {
+      position: sticky; top: 0; z-index: 2; background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 5px 9px; text-align: left;
+      font-size: 9.5px; color: var(--dim); font-weight: 600;
+      text-transform: uppercase; letter-spacing: .8px;
+    }
+    thead th.r { text-align: right; }
+    tbody tr { border-bottom: 1px solid rgba(48,54,61,.35); }
+    tbody tr.flash { animation: rowflash .45s ease-out; }
+    @keyframes rowflash { 0%{background:rgba(88,166,255,.13)} 100%{background:transparent} }
+    td { padding: 4px 9px; white-space: nowrap; }
+    td.sym  { color: var(--blue); font-weight: 700; width: 55px; }
+    td.px   { font-weight: 600; width: 90px; }
+    td.px.up   { color: var(--green); }
+    td.px.down { color: var(--red);   }
+    td.px.flat { color: var(--text);  }
+    td.sz   { color: var(--dim); text-align: right; width: 70px; }
+    td.ts   { color: var(--dim); font-size: 10px; }
+
+    /* ── Col 2: Summary + Alerts ────────────────────────────────────────── */
+    .col-summary { width: 460px; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Alerts section */
+    .alerts-section {
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      max-height: 45%;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .alerts-hdr {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 12px; background: var(--card);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px; font-weight: 700; letter-spacing: .8px;
+      flex-shrink: 0;
+    }
+    .alerts-count {
+      font-size: 10px; font-weight: 700;
+      padding: 1px 7px; border-radius: 10px;
+      background: rgba(248,81,73,.18); color: var(--red);
+    }
+    .alerts-count.none { background: rgba(48,54,61,.4); color: var(--dim); }
+    #alertsEmpty {
+      padding: 14px 12px; font-size: 11px; color: var(--dim);
+      font-style: italic;
+    }
+    .alerts-wrap { overflow-y: auto; flex: 1; }
+    .alerts-wrap::-webkit-scrollbar { width: 3px; }
+    .alerts-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+
+    /* Alert rows */
+    .alert-row {
+      display: flex; align-items: center; gap: 0;
+      padding: 6px 12px;
+      border-bottom: 1px solid rgba(48,54,61,.4);
+      cursor: pointer; transition: background .1s;
+    }
+    .alert-row:hover { background: rgba(48,54,61,.3); }
+    .alert-row.bull { border-left: 3px solid var(--green); }
+    .alert-row.bear { border-left: 3px solid var(--red);   }
+    .ar-sym  { font-family: 'Courier New', monospace; font-weight: 800; font-size: 13px; color: var(--blue); width: 52px; }
+    .ar-flag { font-size: 14px; width: 24px; }
+    .ar-delta {
+      font-family: 'Courier New', monospace; font-weight: 700; font-size: 13px;
+      width: 74px;
+    }
+    .ar-delta.bull { color: var(--green); }
+    .ar-delta.bear { color: var(--red);   }
+    .ar-details { flex: 1; font-family: 'Courier New', monospace; font-size: 10px; color: var(--dim); line-height: 1.5; }
+    .ar-time { font-size: 9px; color: var(--dim); margin-left: auto; }
+
+    /* Full summary table */
+    .summary-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .sum-wrap { overflow-y: auto; flex: 1; }
+    .sum-wrap::-webkit-scrollbar { width: 3px; }
+    .sum-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+
+    #sumTable td.delta-pos { color: var(--green); font-weight: 700; }
+    #sumTable td.delta-neg { color: var(--red);   font-weight: 700; }
+    #sumTable td.delta-nil { color: var(--dim); }
+    #sumTable tbody tr { cursor: pointer; }
+    #sumTable tbody tr:hover td { background: rgba(48,54,61,.25); }
+    #sumTable tbody tr.hl-bull td { background: rgba(63,185,80,.07); }
+    #sumTable tbody tr.hl-bear td { background: rgba(248,81,73,.07); }
+    #sumTable td { font-family: 'Courier New', monospace; font-size: 11px; }
+    #sumTable td.r { text-align: right; }
+    #sumTable td.sym { color: var(--blue); font-weight: 700; font-size: 12px; }
+
+    /* ── Col 3: Chart ───────────────────────────────────────────────────── */
+    .col-chart { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .chart-controls {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 7px 14px; background: var(--card);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .ctrl-lbl { font-size: 9.5px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+    select#symSel {
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 4px 10px; font-size: 13px;
+      font-family: 'Courier New', monospace; font-weight: 700;
+      cursor: pointer; outline: none;
+    }
+    select#symSel:focus { border-color: var(--blue); }
+    .cur-price { font-size: 20px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--teal); }
+    .price-badge { font-size: 11px; font-family: 'Courier New', monospace; padding: 2px 8px; border-radius: 5px; display: none; }
+    .price-badge.up   { background: rgba(63,185,80,.14);  color: var(--green); }
+    .price-badge.down { background: rgba(248,81,73,.14);  color: var(--red);   }
+    .win-badge { margin-left: auto; font-size: 9.5px; padding: 2px 9px; border-radius: 10px; background: rgba(88,166,255,.1); color: var(--blue); border: 1px solid rgba(88,166,255,.25); }
+    .chart-wrap { flex: 1; padding: 12px 14px 8px; position: relative; min-height: 0; }
+    #priceChart { width: 100% !important; height: 100% !important; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">⚡ Alpaca <span>Live Stream</span> <sup>PAPER</sup></div>
+    <div class="filter-badge">TICKER ≤ 4 CHARS</div>
+    <div id="status" class="connecting">● CONNECTING</div>
+  </header>
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-val g" id="sTrades">0</div><div class="stat-label">Trades (5 min)</div></div>
+    <div class="stat"><div class="stat-val b" id="sSymbols">0</div><div class="stat-label">Symbols</div></div>
+    <div class="stat"><div class="stat-val" id="sRate">0/s</div><div class="stat-label">Trade Rate</div></div>
+    <div class="stat"><div class="stat-val o" id="sAlerts">0</div><div class="stat-label">🚨 Alerts &gt;5%</div></div>
+  </div>
+
+  <!-- 3-column body -->
+  <div class="main">
+
+    <!-- ── Col 1: Live trades ────────────────────────────────────────────── -->
+    <div class="col col-trades">
+      <div class="panel-hdr"><div class="dot-live"></div>Live Trades</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Sym</th><th>Price</th><th class="r">Size</th><th>Time</th>
+          </tr></thead>
+          <tbody id="tBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Col 2: Alerts + Summary ──────────────────────────────────────── -->
+    <div class="col col-summary">
+
+      <!-- Alerts section -->
+      <div class="alerts-section">
+        <div class="alerts-hdr">
+          🚨 &nbsp;SPIKE ALERTS
+          <span class="alerts-count none" id="alertsCount">0 active</span>
+        </div>
+        <div class="alerts-wrap" id="alertsWrap">
+          <div id="alertsEmpty" style="display:none">Watching for Δ &gt; 5% between 1-min and 2-min windows…</div>
+        </div>
+      </div>
+
+      <!-- Full summary table -->
+      <div class="summary-section">
+        <div class="panel-hdr">
+          <div class="dot-live"></div>Ticker Summary
+          <span style="margin-left:auto;font-size:9px;color:var(--dim)">sorted by |Δ%| · refreshes every 5s</span>
+        </div>
+        <div class="sum-wrap">
+          <table id="sumTable">
+            <thead><tr>
+              <th>Sym</th>
+              <th class="r">Vol 1m</th>
+              <th class="r">High 1m</th>
+              <th class="r">High 2m*</th>
+              <th class="r">Δ%</th>
+              <th class="r">#Trades</th>
+            </tr></thead>
+            <tbody id="sumBody"></tbody>
+          </table>
+        </div>
+        <div style="padding:4px 10px;font-size:9px;color:var(--dim);border-top:1px solid var(--border);">
+          * High 2m = highest price from 60s–120s ago (prior 1-min window)
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Col 3: Chart ──────────────────────────────────────────────────── -->
+    <div class="col col-chart">
+      <div class="chart-controls">
+        <span class="ctrl-lbl">Symbol</span>
+        <select id="symSel"><option value="">— select —</option></select>
+        <div class="cur-price" id="curPrice">—</div>
+        <div class="price-badge" id="priceBadge"></div>
+        <div class="win-badge">Last 5 min</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="priceChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// CHART
+// ══════════════════════════════════════════════════════════════════════════════
+const chartCtx = document.getElementById('priceChart').getContext('2d');
+const chart = new Chart(chartCtx, {
+  type: 'line',
+  data: { datasets: [{
+    label: 'Price', data: [],
+    borderColor: '#39d353', backgroundColor: 'rgba(57,211,83,.06)',
+    borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 5, tension: 0, fill: true,
+  }]},
+  options: {
+    animation: false, responsive: true, maintainAspectRatio: false,
+    interaction: { intersect: false, mode: 'index' },
+    scales: {
+      x: {
+        type: 'time',
+        time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' }, tooltipFormat: 'HH:mm:ss.SSS' },
+        ticks: { color: '#8b949e', maxTicksLimit: 10, font: { family: 'Courier New', size: 11 } },
+        grid: { color: 'rgba(48,54,61,.5)' }, border: { color: '#30363d' },
+      },
+      y: {
+        ticks: { color: '#8b949e', callback: v => '$' + v.toFixed(2), font: { family: 'Courier New', size: 11 } },
+        grid: { color: 'rgba(48,54,61,.5)' }, border: { color: '#30363d' },
+      },
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#161b22', borderColor: '#30363d', borderWidth: 1,
+        titleColor: '#8b949e', bodyColor: '#e6edf3',
+        callbacks: { label: c => `$${c.parsed.y.toFixed(4)}  ×  ${c.raw.sz || ''}` },
+      },
+    },
+  },
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════════════════
+// symbolData: sym → [{x:ms, y:price, sz:size}]  — kept for 5 min window
+const symbolData = new Map();
+const lastPrice  = new Map();   // sym → last trade price
+const allSyms    = new Set();
+
+const tableRows  = [];
+const MAX_ROWS   = 180;
+
+let selectedSym  = null;
+const rateWin    = [];
+
+const WIN_5M  = 5 * 60_000;
+const WIN_1M  =     60_000;
+const WIN_2M  = 2 * 60_000;
+const DELTA_THRESHOLD = 5;  // percent
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TIME UTILS
+// ══════════════════════════════════════════════════════════════════════════════
+const cutoff5m = () => Date.now() - WIN_5M;
+const cutoff1m = () => Date.now() - WIN_1M;
+const cutoff2m = () => Date.now() - WIN_2M;
+
+function msToTimeStr(ms) {
+  const d = new Date(ms);
+  return [d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()]
+    .map(n => String(n).padStart(2,'0')).join(':')
+    + '.' + String(d.getUTCMilliseconds()).padStart(3,'0');
+}
+
+function cleanData() {
+  const cut = cutoff5m();
+  for (const [sym, pts] of symbolData) {
+    let i = 0; while (i < pts.length && pts[i].x < cut) i++;
+    if (i) pts.splice(0, i);
+    if (!pts.length) symbolData.delete(sym);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TICKER SUMMARY COMPUTATION
+// ══════════════════════════════════════════════════════════════════════════════
+function computeSummary() {
+  const now  = Date.now();
+  const c1m  = now - WIN_1M;   // last 1 min: [c1m, now]
+  const c2ms = now - WIN_2M;   // prev 1 min: [c2ms, c1m)
+  const rows = [];
+
+  for (const [sym, pts] of symbolData) {
+    const pts1m = pts.filter(p => p.x >= c1m);            // current 1-min window
+    const pts2m = pts.filter(p => p.x >= c2ms && p.x < c1m); // previous 1-min window
+
+    if (!pts1m.length) continue;
+
+    const vol1m  = pts1m.reduce((s, p) => s + (p.sz || 0), 0);
+    const max1m  = Math.max(...pts1m.map(p => p.y));
+    const max2m  = pts2m.length ? Math.max(...pts2m.map(p => p.y)) : null;
+    const cnt1m  = pts1m.length;
+
+    // Delta: how much did the 1-min high change vs prior 1-min high?
+    const delta = max2m != null ? ((max1m - max2m) / max2m) * 100 : null;
+
+    rows.push({ sym, vol1m, max1m, max2m, delta, cnt1m });
+  }
+
+  // Sort: alerts first (|Δ| > threshold), then by |Δ| desc, then vol desc
+  rows.sort((a, b) => {
+    const da = a.delta != null ? Math.abs(a.delta) : -1;
+    const db = b.delta != null ? Math.abs(b.delta) : -1;
+    if (da !== db) return db - da;
+    return b.vol1m - a.vol1m;
+  });
+
+  return rows;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RENDER: SUMMARY TABLE + ALERTS
+// ══════════════════════════════════════════════════════════════════════════════
+const sumBody    = document.getElementById('sumBody');
+const alertsWrap = document.getElementById('alertsWrap');
+const alertsCount= document.getElementById('alertsCount');
+const alertEmpty = document.getElementById('alertsEmpty');
+
+function fmtDelta(d) {
+  if (d == null) return '—';
+  return (d >= 0 ? '+' : '') + d.toFixed(2) + '%';
+}
+function fmtPrice(p) { return p != null ? '$' + p.toFixed(2) : '—'; }
+function fmtVol(v)   { return v >= 1_000_000 ? (v/1_000_000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : v.toString(); }
+
+function renderSummary(rows) {
+  // ── Alerts table ─────────────────────────────────────────────
+  const alerts = rows.filter(r => r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD);
+  alertsCount.textContent = alerts.length + ' active';
+  alertsCount.className   = 'alerts-count' + (alerts.length ? '' : ' none');
+  document.getElementById('sAlerts').textContent = alerts.length;
+  document.getElementById('sAlerts').className   = 'stat-val ' + (alerts.length ? 'r' : '');
+
+  // Clear alerts pane (keep empty msg node)
+  while (alertsWrap.firstChild && alertsWrap.firstChild !== alertEmpty) {
+    alertsWrap.removeChild(alertsWrap.firstChild);
+  }
+
+  if (!alerts.length) {
+    alertEmpty.style.display = '';
+  } else {
+    alertEmpty.style.display = 'none';
+    const frag = document.createDocumentFragment();
+    for (const r of alerts) {
+      const bull = r.delta > 0;
+      const div  = document.createElement('div');
+      div.className = 'alert-row ' + (bull ? 'bull' : 'bear');
+      div.innerHTML =
+        `<div class="ar-sym">${r.sym}</div>` +
+        `<div class="ar-flag">${bull ? '🔥' : '🔻'}</div>` +
+        `<div class="ar-delta ${bull ? 'bull' : 'bear'}">${fmtDelta(r.delta)}</div>` +
+        `<div class="ar-details">` +
+          `High 1m: <b style="color:var(--text)">${fmtPrice(r.max1m)}</b>` +
+          `&nbsp;|&nbsp;High 2m*: <b style="color:var(--dim)">${fmtPrice(r.max2m)}</b>` +
+          `<br>Vol 1m: ${fmtVol(r.vol1m)} &nbsp;·&nbsp; ${r.cnt1m} trades` +
+        `</div>` +
+        `<div class="ar-time">${new Date().toTimeString().slice(0,8)}</div>`;
+      div.addEventListener('click', () => selectSym(r.sym));
+      frag.appendChild(div);
+    }
+    alertsWrap.insertBefore(frag, alertEmpty);
+  }
+
+  // ── Summary table ─────────────────────────────────────────────
+  const frag2 = document.createDocumentFragment();
+  for (const r of rows) {
+    const tr   = document.createElement('tr');
+    const bull = r.delta != null && r.delta > 0;
+    const bear = r.delta != null && r.delta < 0;
+    const flagged = r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD;
+    if (flagged) tr.className = bull ? 'hl-bull' : 'hl-bear';
+
+    const dClass = r.delta == null ? 'delta-nil' : (bull ? 'delta-pos' : (r.delta < 0 ? 'delta-neg' : 'delta-nil'));
+    const flag   = flagged ? (bull ? ' 🔥' : ' 🔻') : '';
+
+    tr.innerHTML =
+      `<td class="sym">${r.sym}</td>` +
+      `<td class="r">${fmtVol(r.vol1m)}</td>` +
+      `<td class="r">${fmtPrice(r.max1m)}</td>` +
+      `<td class="r" style="color:var(--dim)">${fmtPrice(r.max2m)}</td>` +
+      `<td class="r ${dClass}">${fmtDelta(r.delta)}${flag}</td>` +
+      `<td class="r" style="color:var(--dim)">${r.cnt1m}</td>`;
+    tr.addEventListener('click', () => selectSym(r.sym));
+    frag2.appendChild(tr);
+  }
+  sumBody.replaceChildren(frag2);
+}
+
+function refreshSummary() {
+  const rows = computeSummary();
+  renderSummary(rows);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SYMBOL SELECTOR
+// ══════════════════════════════════════════════════════════════════════════════
+const symSel = document.getElementById('symSel');
+symSel.addEventListener('change', () => { selectedSym = symSel.value || null; rebuildChart(); });
+
+function registerSym(sym) {
+  if (allSyms.has(sym)) return;
+  allSyms.add(sym);
+  const opt = document.createElement('option');
+  opt.value = sym; opt.textContent = sym;
+  let ins = false;
+  for (let i = 1; i < symSel.options.length; i++) {
+    if (symSel.options[i].value > sym) { symSel.insertBefore(opt, symSel.options[i]); ins = true; break; }
+  }
+  if (!ins) symSel.appendChild(opt);
+  if (!selectedSym) { selectedSym = sym; symSel.value = sym; }
+}
+
+function selectSym(sym) {
+  selectedSym = sym;
+  symSel.value = sym;
+  rebuildChart();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CHART
+// ══════════════════════════════════════════════════════════════════════════════
+function rebuildChart() {
+  const pts = selectedSym ? (symbolData.get(selectedSym) || []) : [];
+  chart.data.datasets[0].data  = pts.map(p => ({ x: p.x, y: p.y, sz: p.sz }));
+  chart.data.datasets[0].label = selectedSym || 'Price';
+  chart.update('none');
+  refreshPriceDisplay();
+}
+
+function appendChartPoint(pt) {
+  const ds  = chart.data.datasets[0].data;
+  ds.push({ x: pt.x, y: pt.y, sz: pt.sz });
+  const cut = cutoff5m();
+  let i = 0; while (i < ds.length && ds[i].x < cut) i++;
+  if (i) ds.splice(0, i);
+  chart.update('none');
+}
+
+function refreshPriceDisplay() {
+  const cur   = document.getElementById('curPrice');
+  const badge = document.getElementById('priceBadge');
+  if (!selectedSym) { cur.textContent = '—'; badge.style.display = 'none'; return; }
+  const p = lastPrice.get(selectedSym);
+  if (p == null) { cur.textContent = '—'; badge.style.display = 'none'; return; }
+  cur.textContent = '$' + p.toFixed(2);
+  const pts = symbolData.get(selectedSym);
+  if (pts && pts.length >= 2) {
+    const diff = p - pts[0].y;
+    const pct  = (diff / pts[0].y) * 100;
+    badge.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(2)} (${pct.toFixed(2)}%)`;
+    badge.className   = 'price-badge ' + (diff >= 0 ? 'up' : 'down');
+    badge.style.display = '';
+  } else badge.style.display = 'none';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// LIVE TRADES TABLE
+// ══════════════════════════════════════════════════════════════════════════════
+const tBody = document.getElementById('tBody');
+
+function prependRows(trades) {
+  const frag = document.createDocumentFragment();
+  for (let i = trades.length - 1; i >= 0; i--) {
+    const t   = trades[i];
+    const dir = t._dir || 'flat';
+    const arr = dir === 'up' ? '▲ ' : dir === 'down' ? '▼ ' : '  ';
+    const tr  = document.createElement('tr');
+    tr.className = 'flash';
+    tr.innerHTML =
+      `<td class="sym">${t.symbol}</td>` +
+      `<td class="px ${dir}">${arr}$${t.price.toFixed(2)}</td>` +
+      `<td class="sz">${t.size.toLocaleString()}</td>` +
+      `<td class="ts">${t.time}</td>`;
+    frag.appendChild(tr);
+  }
+  tBody.insertBefore(frag, tBody.firstChild);
+  const all = tBody.querySelectorAll('tr');
+  const extra = all.length - MAX_ROWS;
+  if (extra > 0) for (let i = 0; i < extra; i++) tBody.lastElementChild?.remove();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STATS BAR
+// ══════════════════════════════════════════════════════════════════════════════
+function updateStats() {
+  const now = Date.now();
+  while (rateWin.length && rateWin[0] < now - 1000) rateWin.shift();
+  let total = 0;
+  for (const [, pts] of symbolData) total += pts.length;
+  document.getElementById('sTrades').textContent  = total.toLocaleString();
+  document.getElementById('sSymbols').textContent = symbolData.size.toLocaleString();
+  document.getElementById('sRate').textContent    = rateWin.length + '/s';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CORE TRADE PROCESSOR
+// ══════════════════════════════════════════════════════════════════════════════
+function processBatch(trades) {
+  if (!trades.length) return;
+  const cut = cutoff5m();
+  const fresh = [];
+  let chartHit = false;
+
+  for (const t of trades) {
+    if (t.ts_ms < cut) continue;
+    rateWin.push(Date.now());
+    registerSym(t.symbol);
+
+    if (!symbolData.has(t.symbol)) symbolData.set(t.symbol, []);
+    const pt = { x: t.ts_ms, y: t.price, sz: t.size };
+    symbolData.get(t.symbol).push(pt);
+
+    const prev = lastPrice.get(t.symbol);
+    t._dir = prev == null ? 'flat' : t.price > prev ? 'up' : t.price < prev ? 'down' : 'flat';
+    lastPrice.set(t.symbol, t.price);
+
+    fresh.push(t);
+    if (t.symbol === selectedSym) { appendChartPoint(pt); chartHit = true; }
+  }
+
+  if (fresh.length) prependRows(fresh);
+  if (chartHit) refreshPriceDisplay();
+  updateStats();
+}
+
+function processInit(trades) {
+  const cut = cutoff5m();
+  for (const t of trades) {
+    if (t.ts_ms < cut) continue;
+    registerSym(t.symbol);
+    if (!symbolData.has(t.symbol)) symbolData.set(t.symbol, []);
+    symbolData.get(t.symbol).push({ x: t.ts_ms, y: t.price, sz: t.size });
+    lastPrice.set(t.symbol, t.price);
+  }
+  // Seed table with most recent trades
+  const sorted = [];
+  for (const [sym, pts] of symbolData) {
+    for (const p of pts) sorted.push({ symbol: sym, price: p.y, size: p.sz || 0,
+      time: msToTimeStr(p.x), ts_ms: p.x, _dir: 'flat' });
+  }
+  sorted.sort((a, b) => b.ts_ms - a.ts_ms);
+  prependRows(sorted.slice(0, MAX_ROWS).reverse());
+  rebuildChart();
+  refreshSummary();
+  updateStats();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WEBSOCKET
+// ══════════════════════════════════════════════════════════════════════════════
+let ws, reconnTimer;
+
+function connect() {
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = '● CONNECTING'; statusEl.className = 'connecting';
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+  ws.onopen  = () => { statusEl.textContent = '● CONNECTED'; statusEl.className = 'connected'; clearTimeout(reconnTimer); };
+  ws.onclose = () => { statusEl.textContent = '● RECONNECTING…'; statusEl.className = 'disconnected'; reconnTimer = setTimeout(connect, 3000); };
+  ws.onerror = () => ws.close();
+
+  ws.onmessage = (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch { return; }
+    if      (msg.type === 'init') processInit(msg.data || []);
+    else if (msg.type === 'ping') { /* keep-alive */ }
+    else if (Array.isArray(msg))  {
+      processBatch(msg);
+      // Debounce summary refresh: rebuild at most every 2 s on incoming data
+      clearTimeout(summaryDebounce);
+      summaryDebounce = setTimeout(refreshSummary, 2000);
+    }
+  };
+}
+
+connect();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PERIODIC TASKS
+// ══════════════════════════════════════════════════════════════════════════════
+let summaryDebounce;
+setInterval(() => { cleanData(); updateStats(); refreshPriceDisplay(); }, 10_000);
+setInterval(updateStats, 1_000);
+setInterval(refreshSummary, 5_000);   // rebuild summary + alerts every 5 s
+</script>
+</body>
+</html>
