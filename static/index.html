@@ -75,7 +75,42 @@
     .stat-val.r { color: var(--red);   }
     .stat-label { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-top: 1px; }
 
-    /* ── Main 3-column ──────────────────────────────────────────────────── */
+    /* ── Controls bar ───────────────────────────────────────────────────── */
+    .controls-bar {
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+      padding: 6px 16px; background: var(--card2);
+      border-bottom: 1px solid var(--border); flex-wrap: wrap;
+    }
+    .ctrl-group { display: flex; align-items: center; gap: 6px; }
+    .ctrl-sep   { width: 1px; height: 18px; background: var(--border); margin: 0 8px; }
+    .ctrl-tag   { font-size: 10px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .8px; }
+    .ctrl-input {
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 3px 7px; font-size: 12px; font-family: 'Courier New', monospace;
+      font-weight: 700; width: 64px; outline: none; text-align: right;
+    }
+    .ctrl-input:focus { border-color: var(--blue); }
+    .ctrl-unit { font-size: 11px; color: var(--dim); font-family: 'Courier New', monospace; }
+
+    .voice-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 5px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: all .15s; letter-spacing: .3px;
+    }
+    .voice-btn:hover          { border-color: var(--blue); color: var(--blue); }
+    .voice-btn.on             { border-color: var(--green); color: var(--green); background: rgba(63,185,80,.08); }
+    .voice-btn.off            { border-color: var(--border); color: var(--dim); }
+    .test-btn {
+      padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--dim); font-size: 10px; font-weight: 600;
+      cursor: pointer; transition: all .15s; letter-spacing: .3px;
+    }
+    .test-btn:hover { border-color: var(--purple); color: var(--purple); }
+    .cooldown-tag { font-size: 9px; color: var(--dim); margin-left: 4px; }
+
+    /* ── Main 2-column ──────────────────────────────────────────────────── */
     .main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
     /* ── Column shared ──────────────────────────────────────────────────── */
@@ -93,15 +128,62 @@
     }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
-    /* ── Col 1: Live trades ─────────────────────────────────────────────── */
-    .col-trades { width: 310px; border-right: 1px solid var(--border); }
-    .tbl-wrap {
-      overflow-y: auto; flex: 1;
-    }
-    .tbl-wrap::-webkit-scrollbar { width: 3px; }
-    .tbl-wrap::-webkit-scrollbar-track { background: var(--bg); }
-    .tbl-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    /* ── Col 1: Summary + Split Alerts ──────────────────────────────────── */
+    .col-summary { width: 560px; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 
+    /* Split alerts: bull left | bear right */
+    .alerts-split {
+      display: flex; flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      max-height: 46%; min-height: 120px;
+    }
+    .alerts-half {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .alerts-half.bull { border-right: 1px solid var(--border); }
+    .alerts-half-hdr {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px; flex-shrink: 0;
+      font-size: 10px; font-weight: 700; letter-spacing: .7px;
+    }
+    .alerts-half-hdr.bull { background: rgba(63,185,80,.07);  color: var(--green); border-bottom: 1px solid rgba(63,185,80,.2); }
+    .alerts-half-hdr.bear { background: rgba(248,81,73,.07);  color: var(--red);   border-bottom: 1px solid rgba(248,81,73,.2); }
+    .half-count {
+      font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: auto;
+    }
+    .half-count.bull { background: rgba(63,185,80,.18);  color: var(--green); }
+    .half-count.bear { background: rgba(248,81,73,.18);  color: var(--red);   }
+    .half-count.none { background: rgba(48,54,61,.3);    color: var(--dim);   }
+    .alerts-wrap { overflow-y: auto; flex: 1; }
+    .alerts-wrap::-webkit-scrollbar { width: 3px; }
+    .alerts-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+    .alerts-empty { padding: 12px 10px; font-size: 10px; color: var(--dim); font-style: italic; }
+
+    /* Alert rows */
+    .alert-row {
+      padding: 5px 10px;
+      border-bottom: 1px solid rgba(48,54,61,.35);
+      cursor: pointer; transition: background .1s;
+    }
+    .alert-row:hover { background: rgba(48,54,61,.3); }
+    .alert-row.bull { border-left: 2px solid var(--green); }
+    .alert-row.bear { border-left: 2px solid var(--red);   }
+    .alert-row.stale { opacity: .55; }   /* fading out — alert older than 4 min */
+    .ar-top { display: flex; align-items: center; gap: 4px; }
+    .ar-sym   { font-family: 'Courier New', monospace; font-weight: 800; font-size: 12px; color: var(--blue); width: 42px; }
+    .ar-delta { font-family: 'Courier New', monospace; font-weight: 700; font-size: 12px; width: 60px; }
+    .ar-delta.bull { color: var(--green); }
+    .ar-delta.bear { color: var(--red);   }
+    .ar-val   { font-size: 9px; color: var(--yellow); font-family: 'Courier New', monospace; }
+    .ar-time  { font-size: 9px; color: var(--dim); margin-left: auto; font-family: 'Courier New', monospace; }
+    .ar-sub   { font-family: 'Courier New', monospace; font-size: 9px; color: var(--dim); margin-top: 1px; padding-left: 2px; }
+    .ar-age   { font-size: 8px; color: var(--dim); font-style: italic; margin-left: 4px; }
+
+    /* Full summary table */
+    .summary-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .sum-wrap { overflow-y: auto; flex: 1; }
+    .sum-wrap::-webkit-scrollbar { width: 3px; }
+    .sum-wrap::-webkit-scrollbar-thumb { background: var(--border); }
     table { width: 100%; border-collapse: collapse; font-family: 'Courier New', monospace; font-size: 11.5px; }
     thead th {
       position: sticky; top: 0; z-index: 2; background: var(--card);
@@ -112,76 +194,7 @@
     }
     thead th.r { text-align: right; }
     tbody tr { border-bottom: 1px solid rgba(48,54,61,.35); }
-    tbody tr.flash { animation: rowflash .45s ease-out; }
-    @keyframes rowflash { 0%{background:rgba(88,166,255,.13)} 100%{background:transparent} }
     td { padding: 4px 9px; white-space: nowrap; }
-    td.sym  { color: var(--blue); font-weight: 700; width: 55px; }
-    td.px   { font-weight: 600; width: 90px; }
-    td.px.up   { color: var(--green); }
-    td.px.down { color: var(--red);   }
-    td.px.flat { color: var(--text);  }
-    td.sz   { color: var(--dim); text-align: right; width: 70px; }
-    td.ts   { color: var(--dim); font-size: 10px; }
-
-    /* ── Col 2: Summary + Alerts ────────────────────────────────────────── */
-    .col-summary { width: 460px; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-
-    /* Alerts section */
-    .alerts-section {
-      flex-shrink: 0;
-      border-bottom: 1px solid var(--border);
-      max-height: 45%;
-      display: flex; flex-direction: column;
-      overflow: hidden;
-    }
-    .alerts-hdr {
-      display: flex; align-items: center; gap: 7px;
-      padding: 7px 12px; background: var(--card);
-      border-bottom: 1px solid var(--border);
-      font-size: 10px; font-weight: 700; letter-spacing: .8px;
-      flex-shrink: 0;
-    }
-    .alerts-count {
-      font-size: 10px; font-weight: 700;
-      padding: 1px 7px; border-radius: 10px;
-      background: rgba(248,81,73,.18); color: var(--red);
-    }
-    .alerts-count.none { background: rgba(48,54,61,.4); color: var(--dim); }
-    #alertsEmpty {
-      padding: 14px 12px; font-size: 11px; color: var(--dim);
-      font-style: italic;
-    }
-    .alerts-wrap { overflow-y: auto; flex: 1; }
-    .alerts-wrap::-webkit-scrollbar { width: 3px; }
-    .alerts-wrap::-webkit-scrollbar-thumb { background: var(--border); }
-
-    /* Alert rows */
-    .alert-row {
-      display: flex; align-items: center; gap: 0;
-      padding: 6px 12px;
-      border-bottom: 1px solid rgba(48,54,61,.4);
-      cursor: pointer; transition: background .1s;
-    }
-    .alert-row:hover { background: rgba(48,54,61,.3); }
-    .alert-row.bull { border-left: 3px solid var(--green); }
-    .alert-row.bear { border-left: 3px solid var(--red);   }
-    .ar-sym  { font-family: 'Courier New', monospace; font-weight: 800; font-size: 13px; color: var(--blue); width: 52px; }
-    .ar-flag { font-size: 14px; width: 24px; }
-    .ar-delta {
-      font-family: 'Courier New', monospace; font-weight: 700; font-size: 13px;
-      width: 74px;
-    }
-    .ar-delta.bull { color: var(--green); }
-    .ar-delta.bear { color: var(--red);   }
-    .ar-details { flex: 1; font-family: 'Courier New', monospace; font-size: 10px; color: var(--dim); line-height: 1.5; }
-    .ar-time { font-size: 9px; color: var(--dim); margin-left: auto; }
-
-    /* Full summary table */
-    .summary-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .sum-wrap { overflow-y: auto; flex: 1; }
-    .sum-wrap::-webkit-scrollbar { width: 3px; }
-    .sum-wrap::-webkit-scrollbar-thumb { background: var(--border); }
-
     #sumTable td.delta-pos { color: var(--green); font-weight: 700; }
     #sumTable td.delta-neg { color: var(--red);   font-weight: 700; }
     #sumTable td.delta-nil { color: var(--dim); }
@@ -233,37 +246,72 @@
     <div class="stat"><div class="stat-val g" id="sTrades">0</div><div class="stat-label">Trades (5 min)</div></div>
     <div class="stat"><div class="stat-val b" id="sSymbols">0</div><div class="stat-label">Symbols</div></div>
     <div class="stat"><div class="stat-val" id="sRate">0/s</div><div class="stat-label">Trade Rate</div></div>
-    <div class="stat"><div class="stat-val o" id="sAlerts">0</div><div class="stat-label">🚨 Alerts &gt;5%</div></div>
+    <div class="stat"><div class="stat-val o" id="sAlerts">0</div><div class="stat-label">🚨 Alerts (<span id="sAlertThresh">5%·$100K</span>)</div></div>
   </div>
 
-  <!-- 3-column body -->
-  <div class="main">
-
-    <!-- ── Col 1: Live trades ────────────────────────────────────────────── -->
-    <div class="col col-trades">
-      <div class="panel-hdr"><div class="dot-live"></div>Live Trades</div>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th>Sym</th><th>Price</th><th class="r">Size</th><th>Time</th>
-          </tr></thead>
-          <tbody id="tBody"></tbody>
-        </table>
-      </div>
+  <!-- Controls bar -->
+  <div class="controls-bar">
+    <!-- Delta threshold -->
+    <div class="ctrl-group">
+      <span class="ctrl-tag">Δ% ≥</span>
+      <input class="ctrl-input" type="number" id="ctrlDelta" value="5" min="1" max="99" step="0.5">
+      <span class="ctrl-unit">%</span>
     </div>
 
-    <!-- ── Col 2: Alerts + Summary ──────────────────────────────────────── -->
+    <div class="ctrl-sep"></div>
+
+    <!-- Dollar value threshold -->
+    <div class="ctrl-group">
+      <span class="ctrl-tag">$ Val ≥</span>
+      <input class="ctrl-input" type="number" id="ctrlVal" value="100" min="1" step="10">
+      <span class="ctrl-unit">K</span>
+    </div>
+
+    <div class="ctrl-sep"></div>
+
+    <!-- Voice controls -->
+    <button class="voice-btn on" id="voiceBtn">🔊 Voice ON</button>
+    <button class="test-btn"     id="testBtn">Test Voice</button>
+    <div class="ctrl-group">
+      <span class="ctrl-tag">Cooldown</span>
+      <input class="ctrl-input" type="number" id="ctrlCooldown" value="120" min="10" max="600" step="10" style="width:52px">
+      <span class="ctrl-unit">s</span>
+    </div>
+
+    <span class="cooldown-tag" id="voiceStatus">ready</span>
+  </div>
+
+  <!-- 2-column body -->
+  <div class="main">
+
+    <!-- ── Col 1: Split Alerts + Summary ────────────────────────────────── -->
     <div class="col col-summary">
 
-      <!-- Alerts section -->
-      <div class="alerts-section">
-        <div class="alerts-hdr">
-          🚨 &nbsp;SPIKE ALERTS
-          <span class="alerts-count none" id="alertsCount">0 active</span>
+      <!-- Split alerts: bull | bear -->
+      <div class="alerts-split">
+
+        <!-- Bull panel -->
+        <div class="alerts-half bull">
+          <div class="alerts-half-hdr bull">
+            🔥 BULL SPIKES
+            <span class="half-count none" id="bullCount">0</span>
+          </div>
+          <div class="alerts-wrap" id="bullWrap">
+            <div class="alerts-empty" id="bullEmpty">Watching for Δ &gt; 5%…</div>
+          </div>
         </div>
-        <div class="alerts-wrap" id="alertsWrap">
-          <div id="alertsEmpty" style="display:none">Watching for Δ &gt; 5% between 1-min and 2-min windows…</div>
+
+        <!-- Bear panel -->
+        <div class="alerts-half bear">
+          <div class="alerts-half-hdr bear">
+            🔻 BEAR SPIKES
+            <span class="half-count none" id="bearCount">0</span>
+          </div>
+          <div class="alerts-wrap" id="bearWrap">
+            <div class="alerts-empty" id="bearEmpty">Watching for Δ &gt; 5%…</div>
+          </div>
         </div>
+
       </div>
 
       <!-- Full summary table -->
@@ -276,9 +324,9 @@
           <table id="sumTable">
             <thead><tr>
               <th>Sym</th>
-              <th class="r">Vol 1m</th>
-              <th class="r">High 1m</th>
-              <th class="r">High 2m*</th>
+              <th class="r">$ Val 1m</th>
+              <th class="r">VWAP 1m</th>
+              <th class="r">VWAP 2m*</th>
               <th class="r">Δ%</th>
               <th class="r">#Trades</th>
             </tr></thead>
@@ -286,12 +334,12 @@
           </table>
         </div>
         <div style="padding:4px 10px;font-size:9px;color:var(--dim);border-top:1px solid var(--border);">
-          * High 2m = highest price from 60s–120s ago (prior 1-min window)
+          * VWAP 2m = prior 60–120s window · alerts require Δ% threshold + &gt;$100k value + ≥5 trades · persists 5 min
         </div>
       </div>
     </div>
 
-    <!-- ── Col 3: Chart ──────────────────────────────────────────────────── -->
+    <!-- ── Col 2: Chart ───────────────────────────────────────────────────── -->
     <div class="col col-chart">
       <div class="chart-controls">
         <span class="ctrl-lbl">Symbol</span>
@@ -350,12 +398,10 @@ const chart = new Chart(chartCtx, {
 // STATE
 // ══════════════════════════════════════════════════════════════════════════════
 // symbolData: sym → [{x:ms, y:price, sz:size}]  — kept for 5 min window
-const symbolData = new Map();
-const lastPrice  = new Map();   // sym → last trade price
-const allSyms    = new Set();
-
-const tableRows  = [];
-const MAX_ROWS   = 180;
+const symbolData   = new Map();
+const lastPrice    = new Map();   // sym → last trade price
+const allSyms      = new Set();
+const alertHistory = new Map();   // sym → {row, firstTs, lastTs} — persists 5 min
 
 let selectedSym  = null;
 const rateWin    = [];
@@ -363,7 +409,9 @@ const rateWin    = [];
 const WIN_5M  = 5 * 60_000;
 const WIN_1M  =     60_000;
 const WIN_2M  = 2 * 60_000;
-const DELTA_THRESHOLD = 5;  // percent
+let DELTA_THRESHOLD  = 5;       // percent  — live-adjustable via controls bar
+let VALUE_THRESHOLD  = 100_000; // min $ traded in 1m window — live-adjustable
+let SPEAK_COOLDOWN   = 120_000; // ms between re-speaking same ticker
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TIME UTILS
@@ -391,47 +439,59 @@ function cleanData() {
 // ══════════════════════════════════════════════════════════════════════════════
 // TICKER SUMMARY COMPUTATION
 // ══════════════════════════════════════════════════════════════════════════════
+function calcVwap(pts) {
+  // Volume-weighted average price
+  const sumPV = pts.reduce((s, p) => s + p.y * (p.sz || 0), 0);
+  const sumV  = pts.reduce((s, p) => s + (p.sz || 0), 0);
+  return sumV > 0 ? sumPV / sumV : pts[pts.length - 1].y;
+}
+
 function computeSummary() {
   const now  = Date.now();
-  const c1m  = now - WIN_1M;   // last 1 min: [c1m, now]
-  const c2ms = now - WIN_2M;   // prev 1 min: [c2ms, c1m)
+  const c1m  = now - WIN_1M;   // last 1 min:  [c1m,  now)
+  const c2ms = now - WIN_2M;   // prior 1 min: [c2ms, c1m)
   const rows = [];
 
   for (const [sym, pts] of symbolData) {
-    const pts1m = pts.filter(p => p.x >= c1m);            // current 1-min window
-    const pts2m = pts.filter(p => p.x >= c2ms && p.x < c1m); // previous 1-min window
+    const pts1m = pts.filter(p => p.x >= c1m);
+    const pts2m = pts.filter(p => p.x >= c2ms && p.x < c1m);
 
-    if (!pts1m.length) continue;
+    if (pts1m.length < 5) continue;   // ← min 5 trades in the last minute
 
-    const vol1m  = pts1m.reduce((s, p) => s + (p.sz || 0), 0);
-    const max1m  = Math.max(...pts1m.map(p => p.y));
-    const max2m  = pts2m.length ? Math.max(...pts2m.map(p => p.y)) : null;
-    const cnt1m  = pts1m.length;
+    const vol1m   = pts1m.reduce((s, p) => s + (p.sz || 0), 0);
+    const value1m = pts1m.reduce((s, p) => s + p.y * (p.sz || 0), 0); // $ traded in 1m window
+    const cnt1m   = pts1m.length;
 
-    // Delta: how much did the 1-min high change vs prior 1-min high?
-    const delta = max2m != null ? ((max1m - max2m) / max2m) * 100 : null;
+    const vwap1m  = calcVwap(pts1m);
+    const vwap2m  = pts2m.length ? calcVwap(pts2m) : null;
 
-    rows.push({ sym, vol1m, max1m, max2m, delta, cnt1m });
+    // Delta: VWAP this minute vs VWAP last minute
+    const delta = vwap2m != null ? ((vwap1m - vwap2m) / vwap2m) * 100 : null;
+
+    rows.push({ sym, vol1m, value1m, vwap1m, vwap2m, delta, cnt1m });
   }
 
-  // Sort: alerts first (|Δ| > threshold), then by |Δ| desc, then vol desc
+  // Sort by |Δ%| desc, then by $ value desc
   rows.sort((a, b) => {
     const da = a.delta != null ? Math.abs(a.delta) : -1;
     const db = b.delta != null ? Math.abs(b.delta) : -1;
     if (da !== db) return db - da;
-    return b.vol1m - a.vol1m;
+    return b.value1m - a.value1m;
   });
 
   return rows;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// RENDER: SUMMARY TABLE + ALERTS
+// RENDER: SUMMARY TABLE + SPLIT ALERTS
 // ══════════════════════════════════════════════════════════════════════════════
-const sumBody    = document.getElementById('sumBody');
-const alertsWrap = document.getElementById('alertsWrap');
-const alertsCount= document.getElementById('alertsCount');
-const alertEmpty = document.getElementById('alertsEmpty');
+const sumBody  = document.getElementById('sumBody');
+const bullWrap = document.getElementById('bullWrap');
+const bearWrap = document.getElementById('bearWrap');
+const bullEmpty= document.getElementById('bullEmpty');
+const bearEmpty= document.getElementById('bearEmpty');
+
+const ALERT_TTL = 5 * 60_000;   // keep alerts visible for 5 minutes
 
 function fmtDelta(d) {
   if (d == null) return '—';
@@ -439,62 +499,121 @@ function fmtDelta(d) {
 }
 function fmtPrice(p) { return p != null ? '$' + p.toFixed(2) : '—'; }
 function fmtVol(v)   { return v >= 1_000_000 ? (v/1_000_000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : v.toString(); }
+function fmtVal(v)   { return v >= 1_000_000 ? '$'+(v/1_000_000).toFixed(2)+'M' : v >= 1000 ? '$'+(v/1000).toFixed(1)+'K' : '$'+v.toFixed(0); }
+
+function buildAlertRow(r, ts) {
+  const bull = r.delta > 0;
+  const age  = Date.now() - ts;
+  const stale = age > 4 * 60_000;   // fade after 4 min, expires at 5 min
+  const ageStr = age < 60_000
+    ? Math.floor(age / 1000) + 's ago'
+    : Math.floor(age / 60_000) + 'm ago';
+  const div = document.createElement('div');
+  div.className = 'alert-row ' + (bull ? 'bull' : 'bear') + (stale ? ' stale' : '');
+  div.innerHTML =
+    `<div class="ar-top">` +
+      `<span class="ar-sym">${r.sym}</span>` +
+      `<span class="ar-delta ${bull ? 'bull' : 'bear'}">${fmtDelta(r.delta)}</span>` +
+      `<span class="ar-val">${fmtVal(r.value1m)}</span>` +
+      `<span class="ar-time">${new Date(ts).toTimeString().slice(0,8)}<span class="ar-age">${ageStr}</span></span>` +
+    `</div>` +
+    `<div class="ar-sub">` +
+      `VWAP 1m <b style="color:var(--text)">${fmtPrice(r.vwap1m)}</b>` +
+      ` vs 2m <b style="color:var(--dim)">${fmtPrice(r.vwap2m)}</b>` +
+      ` · ${r.cnt1m} trades` +
+    `</div>`;
+  div.addEventListener('click', () => selectSym(r.sym));
+  return div;
+}
 
 function renderSummary(rows) {
-  // ── Alerts table ─────────────────────────────────────────────
-  const alerts = rows.filter(r => r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD);
-  alertsCount.textContent = alerts.length + ' active';
-  alertsCount.className   = 'alerts-count' + (alerts.length ? '' : ' none');
-  document.getElementById('sAlerts').textContent = alerts.length;
-  document.getElementById('sAlerts').className   = 'stat-val ' + (alerts.length ? 'r' : '');
+  const now = Date.now();
 
-  // Clear alerts pane (keep empty msg node)
-  while (alertsWrap.firstChild && alertsWrap.firstChild !== alertEmpty) {
-    alertsWrap.removeChild(alertsWrap.firstChild);
+  // ── 1. Qualify fresh alerts ───────────────────────────────────
+  const freshAlerts = rows.filter(r =>
+    r.delta != null &&
+    Math.abs(r.delta) >= DELTA_THRESHOLD &&
+    r.value1m >= VALUE_THRESHOLD
+  );
+
+  // ── 2. Merge into alertHistory (upsert: update row data, keep firstTs) ──
+  for (const r of freshAlerts) {
+    const existing = alertHistory.get(r.sym);
+    alertHistory.set(r.sym, {
+      row:     r,
+      firstTs: existing ? existing.firstTs : now,
+      lastTs:  now,
+    });
   }
 
-  if (!alerts.length) {
-    alertEmpty.style.display = '';
+  // ── 3. Expire entries older than 5 min since last seen ────────
+  for (const [sym, entry] of alertHistory) {
+    if (now - entry.lastTs > ALERT_TTL) alertHistory.delete(sym);
+  }
+
+  // ── 4. Split history into bull / bear ─────────────────────────
+  const bulls = [], bears = [];
+  for (const [, entry] of alertHistory) {
+    (entry.row.delta > 0 ? bulls : bears).push(entry);
+  }
+  // Sort each side by |Δ%| desc
+  const byDelta = (a, b) => Math.abs(b.row.delta) - Math.abs(a.row.delta);
+  bulls.sort(byDelta); bears.sort(byDelta);
+
+  // Speak new (fresh) alerts
+  speakAlerts(freshAlerts);
+
+  // Update stats / chart dropdown based on ALL history entries
+  const allActive = [...alertHistory.values()].map(e => e.row);
+  document.getElementById('sAlerts').textContent = alertHistory.size;
+  document.getElementById('sAlerts').className   = 'stat-val ' + (alertHistory.size ? 'r' : '');
+  updateChartDropdown(allActive);
+
+  // ── 5. Render bull panel ──────────────────────────────────────
+  document.getElementById('bullCount').textContent = bulls.length || '0';
+  document.getElementById('bullCount').className   = 'half-count ' + (bulls.length ? 'bull' : 'none');
+  bullWrap.replaceChildren();
+  if (!bulls.length) {
+    bullWrap.appendChild(bullEmpty);
+    bullEmpty.style.display = '';
   } else {
-    alertEmpty.style.display = 'none';
+    bullEmpty.style.display = 'none';
     const frag = document.createDocumentFragment();
-    for (const r of alerts) {
-      const bull = r.delta > 0;
-      const div  = document.createElement('div');
-      div.className = 'alert-row ' + (bull ? 'bull' : 'bear');
-      div.innerHTML =
-        `<div class="ar-sym">${r.sym}</div>` +
-        `<div class="ar-flag">${bull ? '🔥' : '🔻'}</div>` +
-        `<div class="ar-delta ${bull ? 'bull' : 'bear'}">${fmtDelta(r.delta)}</div>` +
-        `<div class="ar-details">` +
-          `High 1m: <b style="color:var(--text)">${fmtPrice(r.max1m)}</b>` +
-          `&nbsp;|&nbsp;High 2m*: <b style="color:var(--dim)">${fmtPrice(r.max2m)}</b>` +
-          `<br>Vol 1m: ${fmtVol(r.vol1m)} &nbsp;·&nbsp; ${r.cnt1m} trades` +
-        `</div>` +
-        `<div class="ar-time">${new Date().toTimeString().slice(0,8)}</div>`;
-      div.addEventListener('click', () => selectSym(r.sym));
-      frag.appendChild(div);
-    }
-    alertsWrap.insertBefore(frag, alertEmpty);
+    for (const e of bulls) frag.appendChild(buildAlertRow(e.row, e.firstTs));
+    bullWrap.appendChild(frag);
   }
 
-  // ── Summary table ─────────────────────────────────────────────
+  // ── 6. Render bear panel ──────────────────────────────────────
+  document.getElementById('bearCount').textContent = bears.length || '0';
+  document.getElementById('bearCount').className   = 'half-count ' + (bears.length ? 'bear' : 'none');
+  bearWrap.replaceChildren();
+  if (!bears.length) {
+    bearWrap.appendChild(bearEmpty);
+    bearEmpty.style.display = '';
+  } else {
+    bearEmpty.style.display = 'none';
+    const frag = document.createDocumentFragment();
+    for (const e of bears) frag.appendChild(buildAlertRow(e.row, e.firstTs));
+    bearWrap.appendChild(frag);
+  }
+
+  // ── 7. Summary table ─────────────────────────────────────────
   const frag2 = document.createDocumentFragment();
   for (const r of rows) {
     const tr   = document.createElement('tr');
     const bull = r.delta != null && r.delta > 0;
-    const bear = r.delta != null && r.delta < 0;
-    const flagged = r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD;
+    const flagged = r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD && r.value1m >= VALUE_THRESHOLD;
     if (flagged) tr.className = bull ? 'hl-bull' : 'hl-bear';
 
-    const dClass = r.delta == null ? 'delta-nil' : (bull ? 'delta-pos' : (r.delta < 0 ? 'delta-neg' : 'delta-nil'));
-    const flag   = flagged ? (bull ? ' 🔥' : ' 🔻') : '';
+    const dClass   = r.delta == null ? 'delta-nil' : (bull ? 'delta-pos' : (r.delta < 0 ? 'delta-neg' : 'delta-nil'));
+    const flag     = flagged ? (bull ? ' 🔥' : ' 🔻') : '';
+    const valColor = r.value1m >= VALUE_THRESHOLD ? 'color:var(--yellow)' : 'color:var(--dim)';
 
     tr.innerHTML =
       `<td class="sym">${r.sym}</td>` +
-      `<td class="r">${fmtVol(r.vol1m)}</td>` +
-      `<td class="r">${fmtPrice(r.max1m)}</td>` +
-      `<td class="r" style="color:var(--dim)">${fmtPrice(r.max2m)}</td>` +
+      `<td class="r" style="${valColor}">${fmtVal(r.value1m)}</td>` +
+      `<td class="r">${fmtPrice(r.vwap1m)}</td>` +
+      `<td class="r" style="color:var(--dim)">${fmtPrice(r.vwap2m)}</td>` +
       `<td class="r ${dClass}">${fmtDelta(r.delta)}${flag}</td>` +
       `<td class="r" style="color:var(--dim)">${r.cnt1m}</td>`;
     tr.addEventListener('click', () => selectSym(r.sym));
@@ -515,16 +634,34 @@ const symSel = document.getElementById('symSel');
 symSel.addEventListener('change', () => { selectedSym = symSel.value || null; rebuildChart(); });
 
 function registerSym(sym) {
-  if (allSyms.has(sym)) return;
+  // Just track in allSyms — chart dropdown is driven by alerts only
   allSyms.add(sym);
-  const opt = document.createElement('option');
-  opt.value = sym; opt.textContent = sym;
-  let ins = false;
-  for (let i = 1; i < symSel.options.length; i++) {
-    if (symSel.options[i].value > sym) { symSel.insertBefore(opt, symSel.options[i]); ins = true; break; }
+}
+
+function updateChartDropdown(alerts) {
+  // Rebuild dropdown with only currently alerted symbols (sorted by |Δ%|)
+  const prev = selectedSym;
+  // Clear all options except placeholder
+  while (symSel.options.length > 1) symSel.remove(1);
+
+  for (const r of alerts) {
+    const opt = document.createElement('option');
+    opt.value = r.sym;
+    opt.textContent = `${r.sym}  ${r.delta >= 0 ? '🔥' : '🔻'} ${r.delta.toFixed(1)}%`;
+    symSel.appendChild(opt);
   }
-  if (!ins) symSel.appendChild(opt);
-  if (!selectedSym) { selectedSym = sym; symSel.value = sym; }
+
+  // Re-select previous or auto-pick top alert
+  if (alerts.length) {
+    const keep = alerts.find(r => r.sym === prev);
+    selectedSym = keep ? prev : alerts[0].sym;
+    symSel.value = selectedSym;
+    rebuildChart();
+  } else {
+    selectedSym = null;
+    symSel.value = '';
+    rebuildChart();
+  }
 }
 
 function selectSym(sym) {
@@ -571,32 +708,6 @@ function refreshPriceDisplay() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// LIVE TRADES TABLE
-// ══════════════════════════════════════════════════════════════════════════════
-const tBody = document.getElementById('tBody');
-
-function prependRows(trades) {
-  const frag = document.createDocumentFragment();
-  for (let i = trades.length - 1; i >= 0; i--) {
-    const t   = trades[i];
-    const dir = t._dir || 'flat';
-    const arr = dir === 'up' ? '▲ ' : dir === 'down' ? '▼ ' : '  ';
-    const tr  = document.createElement('tr');
-    tr.className = 'flash';
-    tr.innerHTML =
-      `<td class="sym">${t.symbol}</td>` +
-      `<td class="px ${dir}">${arr}$${t.price.toFixed(2)}</td>` +
-      `<td class="sz">${t.size.toLocaleString()}</td>` +
-      `<td class="ts">${t.time}</td>`;
-    frag.appendChild(tr);
-  }
-  tBody.insertBefore(frag, tBody.firstChild);
-  const all = tBody.querySelectorAll('tr');
-  const extra = all.length - MAX_ROWS;
-  if (extra > 0) for (let i = 0; i < extra; i++) tBody.lastElementChild?.remove();
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
 // STATS BAR
 // ══════════════════════════════════════════════════════════════════════════════
 function updateStats() {
@@ -615,7 +726,6 @@ function updateStats() {
 function processBatch(trades) {
   if (!trades.length) return;
   const cut = cutoff5m();
-  const fresh = [];
   let chartHit = false;
 
   for (const t of trades) {
@@ -627,15 +737,10 @@ function processBatch(trades) {
     const pt = { x: t.ts_ms, y: t.price, sz: t.size };
     symbolData.get(t.symbol).push(pt);
 
-    const prev = lastPrice.get(t.symbol);
-    t._dir = prev == null ? 'flat' : t.price > prev ? 'up' : t.price < prev ? 'down' : 'flat';
     lastPrice.set(t.symbol, t.price);
-
-    fresh.push(t);
     if (t.symbol === selectedSym) { appendChartPoint(pt); chartHit = true; }
   }
 
-  if (fresh.length) prependRows(fresh);
   if (chartHit) refreshPriceDisplay();
   updateStats();
 }
@@ -649,14 +754,6 @@ function processInit(trades) {
     symbolData.get(t.symbol).push({ x: t.ts_ms, y: t.price, sz: t.size });
     lastPrice.set(t.symbol, t.price);
   }
-  // Seed table with most recent trades
-  const sorted = [];
-  for (const [sym, pts] of symbolData) {
-    for (const p of pts) sorted.push({ symbol: sym, price: p.y, size: p.sz || 0,
-      time: msToTimeStr(p.x), ts_ms: p.x, _dir: 'flat' });
-  }
-  sorted.sort((a, b) => b.ts_ms - a.ts_ms);
-  prependRows(sorted.slice(0, MAX_ROWS).reverse());
   rebuildChart();
   refreshSummary();
   updateStats();
@@ -699,7 +796,87 @@ connect();
 let summaryDebounce;
 setInterval(() => { cleanData(); updateStats(); refreshPriceDisplay(); }, 10_000);
 setInterval(updateStats, 1_000);
-setInterval(refreshSummary, 5_000);   // rebuild summary + alerts every 5 s
+setInterval(refreshSummary, 5_000);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VOICE ALERTS  (Web Speech API)
+// ══════════════════════════════════════════════════════════════════════════════
+let voiceOn   = true;
+const lastSpoken = new Map();   // sym → timestamp of last speech
+
+function speakAlert(r) {
+  if (!voiceOn) return;
+  if (!window.speechSynthesis) return;
+
+  const now  = Date.now();
+  const last = lastSpoken.get(r.sym) || 0;
+  if (now - last < SPEAK_COOLDOWN) return;   // still in cooldown
+  lastSpoken.set(r.sym, now);
+
+  // Cancel any queued speech so urgent alerts aren't buried
+  window.speechSynthesis.cancel();
+
+  const dir  = r.delta > 0 ? 'up' : 'down';
+  const pct  = Math.abs(r.delta).toFixed(1).replace('.', ' point ');
+  const val  = fmtVal(r.value1m);
+  const text = `${r.sym.split('').join(' ')} — ${dir} ${pct} percent. Value ${val}`;
+
+  const utter    = new SpeechSynthesisUtterance(text);
+  utter.rate     = 1.05;
+  utter.pitch    = r.delta > 0 ? 1.15 : 0.85;   // higher pitch for bulls, lower for bears
+  utter.volume   = 1;
+  window.speechSynthesis.speak(utter);
+
+  document.getElementById('voiceStatus').textContent =
+    `spoke ${r.sym} at ${new Date().toTimeString().slice(0,8)}`;
+}
+
+// Called from renderSummary — speak each qualifying alert
+function speakAlerts(alerts) {
+  for (const r of alerts) speakAlert(r);
+}
+
+// ── Voice button toggle ───────────────────────────────────────────────────────
+const voiceBtn = document.getElementById('voiceBtn');
+voiceBtn.addEventListener('click', () => {
+  voiceOn = !voiceOn;
+  voiceBtn.textContent = voiceOn ? '🔊 Voice ON' : '🔇 Voice OFF';
+  voiceBtn.className   = voiceOn ? 'voice-btn on' : 'voice-btn off';
+  if (!voiceOn) window.speechSynthesis.cancel();
+});
+
+// ── Test voice button ─────────────────────────────────────────────────────────
+document.getElementById('testBtn').addEventListener('click', () => {
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance('Alert test. A A P L — up 6 point 2 percent. Value 250 K');
+  utter.rate  = 1.05;
+  window.speechSynthesis.speak(utter);
+});
+
+// ── Cooldown slider ───────────────────────────────────────────────────────────
+document.getElementById('ctrlCooldown').addEventListener('input', e => {
+  SPEAK_COOLDOWN = (parseFloat(e.target.value) || 120) * 1000;
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// LIVE THRESHOLD CONTROLS
+// ══════════════════════════════════════════════════════════════════════════════
+function updateThreshLabel() {
+  const vK = VALUE_THRESHOLD >= 1_000_000
+    ? (VALUE_THRESHOLD/1_000_000).toFixed(1)+'M'
+    : (VALUE_THRESHOLD/1_000).toFixed(0)+'K';
+  document.getElementById('sAlertThresh').textContent = `${DELTA_THRESHOLD}%·$${vK}`;
+}
+
+document.getElementById('ctrlDelta').addEventListener('input', e => {
+  const v = parseFloat(e.target.value);
+  if (!isNaN(v) && v > 0) { DELTA_THRESHOLD = v; updateThreshLabel(); refreshSummary(); }
+});
+
+document.getElementById('ctrlVal').addEventListener('input', e => {
+  const v = parseFloat(e.target.value);
+  if (!isNaN(v) && v > 0) { VALUE_THRESHOLD = v * 1_000; updateThreshLabel(); refreshSummary(); }
+});
 </script>
 </body>
 </html>
