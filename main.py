@@ -107,6 +107,9 @@ def aggregate_tick(sym: str, price: float, size: int, ts_ms: int) -> None:
 
 
 def article_to_dict(a) -> dict:
+    """Works for both News model objects and raw dicts (from live stream cache)."""
+    if isinstance(a, dict):
+        return a
     return {
         "id":         str(getattr(a, "id", "")),
         "headline":   getattr(a, "headline", "") or "",
@@ -114,7 +117,7 @@ def article_to_dict(a) -> dict:
         "url":        getattr(a, "url",      "") or "",
         "source":     getattr(a, "source",   "") or "",
         "created_at": a.created_at.isoformat() if getattr(a, "created_at", None) else "",
-        "symbols":    getattr(a, "symbols",  []) or [],
+        "symbols":    list(getattr(a, "symbols", []) or []),
     }
 
 
@@ -264,14 +267,15 @@ async def get_bars(sym: str) -> JSONResponse:
 @app.get("/news/{sym}")
 async def get_news_route(sym: str) -> JSONResponse:
     try:
-        nclient = NewsClient(API_KEY, SECRET_KEY)
-        start   = (datetime.now(timezone.utc) - timedelta(days=7)
-                   ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        nclient  = NewsClient(API_KEY, SECRET_KEY)
+        start_dt = datetime.now(timezone.utc) - timedelta(days=7)
 
-        req     = NewsRequest(symbols=sym, start=start, limit=50)
-        resp    = nclient.get_news(req)
+        # symbols = comma-separated string; resp.data["news"] is the article list
+        req  = NewsRequest(symbols=sym, start=start_dt, limit=50)
+        resp = nclient.get_news(req)
 
-        articles = [article_to_dict(a) for a in (resp.news or [])]
+        raw_articles = resp.data.get("news", []) if hasattr(resp, "data") else []
+        articles = [article_to_dict(a) for a in raw_articles]
 
         # Merge with live-streamed news cached on the backend
         seen = {a["id"] for a in articles}
