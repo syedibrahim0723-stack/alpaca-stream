@@ -56,14 +56,8 @@
     #status.connecting   { background: rgba(88,166,255,.12); color: var(--blue);  }
 
     /* ── Stats bar ──────────────────────────────────────────────────────── */
-    .stats-bar {
-      display: flex; flex-shrink: 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .stat {
-      flex: 1; padding: 7px 16px; text-align: center;
-      border-right: 1px solid var(--border);
-    }
+    .stats-bar { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+    .stat { flex: 1; padding: 7px 16px; text-align: center; border-right: 1px solid var(--border); }
     .stat:last-child { border-right: none; }
     .stat-val {
       font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums;
@@ -92,16 +86,15 @@
     }
     .ctrl-input:focus { border-color: var(--blue); }
     .ctrl-unit { font-size: 11px; color: var(--dim); font-family: 'Courier New', monospace; }
-
     .voice-btn {
       display: flex; align-items: center; gap: 5px;
       padding: 4px 12px; border-radius: 5px; border: 1px solid var(--border);
       background: var(--bg); color: var(--text); font-size: 11px; font-weight: 600;
       cursor: pointer; transition: all .15s; letter-spacing: .3px;
     }
-    .voice-btn:hover          { border-color: var(--blue); color: var(--blue); }
-    .voice-btn.on             { border-color: var(--green); color: var(--green); background: rgba(63,185,80,.08); }
-    .voice-btn.off            { border-color: var(--border); color: var(--dim); }
+    .voice-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .voice-btn.on    { border-color: var(--green); color: var(--green); background: rgba(63,185,80,.08); }
+    .voice-btn.off   { border-color: var(--border); color: var(--dim); }
     .test-btn {
       padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border);
       background: var(--bg); color: var(--dim); font-size: 10px; font-weight: 600;
@@ -112,9 +105,7 @@
 
     /* ── Main 2-column ──────────────────────────────────────────────────── */
     .main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
-
-    /* ── Column shared ──────────────────────────────────────────────────── */
-    .col { display: flex; flex-direction: column; overflow: hidden; }
+    .col  { display: flex; flex-direction: column; overflow: hidden; }
     .panel-hdr {
       display: flex; align-items: center; gap: 7px;
       padding: 7px 12px; background: var(--card);
@@ -128,58 +119,46 @@
     }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
-    /* ── Col 1: Summary + Split Alerts ──────────────────────────────────── */
+    /* ── Col 1: Alerts + Summary ─────────────────────────────────────────── */
     .col-summary { width: 560px; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 
-    /* Split alerts: bull left | bear right */
-    .alerts-split {
-      display: flex; flex-shrink: 0;
-      border-bottom: 1px solid var(--border);
-      max-height: 46%; min-height: 120px;
-    }
-    .alerts-half {
-      flex: 1; display: flex; flex-direction: column; overflow: hidden;
-    }
+    /* Split alerts */
+    .alerts-split { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); max-height: 44%; min-height: 120px; }
+    .alerts-half  { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .alerts-half.bull { border-right: 1px solid var(--border); }
-    .alerts-half-hdr {
+    .alerts-half-hdr  {
       display: flex; align-items: center; gap: 6px;
       padding: 6px 10px; flex-shrink: 0;
       font-size: 10px; font-weight: 700; letter-spacing: .7px;
     }
     .alerts-half-hdr.bull { background: rgba(63,185,80,.07);  color: var(--green); border-bottom: 1px solid rgba(63,185,80,.2); }
     .alerts-half-hdr.bear { background: rgba(248,81,73,.07);  color: var(--red);   border-bottom: 1px solid rgba(248,81,73,.2); }
-    .half-count {
-      font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: auto;
-    }
-    .half-count.bull { background: rgba(63,185,80,.18);  color: var(--green); }
-    .half-count.bear { background: rgba(248,81,73,.18);  color: var(--red);   }
-    .half-count.none { background: rgba(48,54,61,.3);    color: var(--dim);   }
+    .half-count { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: auto; }
+    .half-count.bull { background: rgba(63,185,80,.18); color: var(--green); }
+    .half-count.bear { background: rgba(248,81,73,.18); color: var(--red);   }
+    .half-count.none { background: rgba(48,54,61,.3);   color: var(--dim);   }
     .alerts-wrap { overflow-y: auto; flex: 1; }
     .alerts-wrap::-webkit-scrollbar { width: 3px; }
     .alerts-wrap::-webkit-scrollbar-thumb { background: var(--border); }
     .alerts-empty { padding: 12px 10px; font-size: 10px; color: var(--dim); font-style: italic; }
 
     /* Alert rows */
-    .alert-row {
-      padding: 5px 10px;
-      border-bottom: 1px solid rgba(48,54,61,.35);
-      cursor: pointer; transition: background .1s;
-    }
+    .alert-row { padding: 5px 10px; border-bottom: 1px solid rgba(48,54,61,.35); cursor: pointer; transition: background .1s; }
     .alert-row:hover { background: rgba(48,54,61,.3); }
-    .alert-row.bull { border-left: 2px solid var(--green); }
-    .alert-row.bear { border-left: 2px solid var(--red);   }
-    .alert-row.stale { opacity: .55; }   /* fading out — alert older than 4 min */
-    .ar-top { display: flex; align-items: center; gap: 4px; }
+    .alert-row.bull  { border-left: 2px solid var(--green); }
+    .alert-row.bear  { border-left: 2px solid var(--red);   }
+    .alert-row.stale { opacity: .55; }
+    .ar-top   { display: flex; align-items: center; gap: 4px; }
     .ar-sym   { font-family: 'Courier New', monospace; font-weight: 800; font-size: 12px; color: var(--blue); width: 42px; }
     .ar-delta { font-family: 'Courier New', monospace; font-weight: 700; font-size: 12px; width: 60px; }
     .ar-delta.bull { color: var(--green); }
     .ar-delta.bear { color: var(--red);   }
-    .ar-val   { font-size: 9px; color: var(--yellow); font-family: 'Courier New', monospace; }
-    .ar-time  { font-size: 9px; color: var(--dim); margin-left: auto; font-family: 'Courier New', monospace; }
-    .ar-sub   { font-family: 'Courier New', monospace; font-size: 9px; color: var(--dim); margin-top: 1px; padding-left: 2px; }
-    .ar-age   { font-size: 8px; color: var(--dim); font-style: italic; margin-left: 4px; }
+    .ar-val  { font-size: 9px; color: var(--yellow); font-family: 'Courier New', monospace; }
+    .ar-time { font-size: 9px; color: var(--dim); margin-left: auto; font-family: 'Courier New', monospace; }
+    .ar-sub  { font-family: 'Courier New', monospace; font-size: 9px; color: var(--dim); margin-top: 1px; padding-left: 2px; }
+    .ar-age  { font-size: 8px; color: var(--dim); font-style: italic; margin-left: 4px; }
 
-    /* Full summary table */
+    /* Summary table */
     .summary-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .sum-wrap { overflow-y: auto; flex: 1; }
     .sum-wrap::-webkit-scrollbar { width: 3px; }
@@ -187,8 +166,7 @@
     table { width: 100%; border-collapse: collapse; font-family: 'Courier New', monospace; font-size: 11.5px; }
     thead th {
       position: sticky; top: 0; z-index: 2; background: var(--card);
-      border-bottom: 1px solid var(--border);
-      padding: 5px 9px; text-align: left;
+      border-bottom: 1px solid var(--border); padding: 5px 9px; text-align: left;
       font-size: 9.5px; color: var(--dim); font-weight: 600;
       text-transform: uppercase; letter-spacing: .8px;
     }
@@ -203,11 +181,12 @@
     #sumTable tbody tr.hl-bull td { background: rgba(63,185,80,.07); }
     #sumTable tbody tr.hl-bear td { background: rgba(248,81,73,.07); }
     #sumTable td { font-family: 'Courier New', monospace; font-size: 11px; }
-    #sumTable td.r { text-align: right; }
+    #sumTable td.r   { text-align: right; }
     #sumTable td.sym { color: var(--blue); font-weight: 700; font-size: 12px; }
 
-    /* ── Col 3: Chart ───────────────────────────────────────────────────── */
+    /* ── Col 2: Chart + News ─────────────────────────────────────────────── */
     .col-chart { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
     .chart-controls {
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
       padding: 7px 14px; background: var(--card);
@@ -222,13 +201,45 @@
       cursor: pointer; outline: none;
     }
     select#symSel:focus { border-color: var(--blue); }
-    .cur-price { font-size: 20px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--teal); }
+    .cur-price   { font-size: 20px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--teal); }
     .price-badge { font-size: 11px; font-family: 'Courier New', monospace; padding: 2px 8px; border-radius: 5px; display: none; }
     .price-badge.up   { background: rgba(63,185,80,.14);  color: var(--green); }
     .price-badge.down { background: rgba(248,81,73,.14);  color: var(--red);   }
     .win-badge { margin-left: auto; font-size: 9.5px; padding: 2px 9px; border-radius: 10px; background: rgba(88,166,255,.1); color: var(--blue); border: 1px solid rgba(88,166,255,.25); }
-    .chart-wrap { flex: 1; padding: 12px 14px 8px; position: relative; min-height: 0; }
-    #priceChart { width: 100% !important; height: 100% !important; }
+
+    /* chart takes top 55%, news takes rest */
+    .chart-wrap  { flex: 0 0 55%; padding: 10px 14px 6px; position: relative; min-height: 160px; overflow: hidden; }
+    #priceChart  { width: 100% !important; height: 100% !important; }
+
+    /* News panel */
+    .news-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; border-top: 1px solid var(--border); min-height: 0; }
+    .news-hdr {
+      display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+      padding: 6px 12px; background: var(--card);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px; font-weight: 600; color: var(--dim);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .news-sym-badge { font-family: 'Courier New', monospace; font-weight: 800; font-size: 11px; color: var(--blue); margin-left: 4px; }
+    .news-scroll { overflow-y: auto; flex: 1; }
+    .news-scroll::-webkit-scrollbar { width: 3px; }
+    .news-scroll::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .news-item {
+      padding: 7px 12px; border-bottom: 1px solid rgba(48,54,61,.35);
+      transition: background .1s;
+    }
+    .news-item:hover { background: rgba(48,54,61,.2); }
+    .news-item.news-fresh { border-left: 2px solid var(--teal); animation: flash-news .9s ease-out; }
+    @keyframes flash-news { from { background: rgba(57,211,83,.09); } to { background: transparent; } }
+    .news-headline a { font-size: 12px; font-weight: 600; color: var(--text); text-decoration: none; line-height: 1.4; display: block; }
+    .news-headline a:hover { color: var(--blue); }
+    .news-summary { font-size: 10.5px; color: var(--dim); margin-top: 2px; line-height: 1.4; }
+    .news-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+    .news-source { font-size: 9px; font-weight: 700; color: var(--blue);   font-family: 'Courier New', monospace; }
+    .news-time   { font-size: 9px; color: var(--dim);  font-family: 'Courier New', monospace; }
+    .news-syms   { font-size: 9px; color: var(--purple); font-family: 'Courier New', monospace; }
+    .news-empty, .news-loading { padding: 16px 12px; font-size: 11px; color: var(--dim); font-style: italic; text-align: center; }
   </style>
 </head>
 <body>
@@ -251,25 +262,18 @@
 
   <!-- Controls bar -->
   <div class="controls-bar">
-    <!-- Delta threshold -->
     <div class="ctrl-group">
       <span class="ctrl-tag">Δ% ≥</span>
       <input class="ctrl-input" type="number" id="ctrlDelta" value="5" min="1" max="99" step="0.5">
       <span class="ctrl-unit">%</span>
     </div>
-
     <div class="ctrl-sep"></div>
-
-    <!-- Dollar value threshold -->
     <div class="ctrl-group">
       <span class="ctrl-tag">$ Val ≥</span>
       <input class="ctrl-input" type="number" id="ctrlVal" value="100" min="1" step="10">
       <span class="ctrl-unit">K</span>
     </div>
-
     <div class="ctrl-sep"></div>
-
-    <!-- Voice controls -->
     <button class="voice-btn on" id="voiceBtn">🔊 Voice ON</button>
     <button class="test-btn"     id="testBtn">Test Voice</button>
     <div class="ctrl-group">
@@ -277,7 +281,6 @@
       <input class="ctrl-input" type="number" id="ctrlCooldown" value="120" min="10" max="600" step="10" style="width:52px">
       <span class="ctrl-unit">s</span>
     </div>
-
     <span class="cooldown-tag" id="voiceStatus">ready</span>
   </div>
 
@@ -287,9 +290,7 @@
     <!-- ── Col 1: Split Alerts + Summary ────────────────────────────────── -->
     <div class="col col-summary">
 
-      <!-- Split alerts: bull | bear -->
       <div class="alerts-split">
-
         <!-- Bull panel -->
         <div class="alerts-half bull">
           <div class="alerts-half-hdr bull">
@@ -300,7 +301,6 @@
             <div class="alerts-empty" id="bullEmpty">Watching for Δ &gt; 5%…</div>
           </div>
         </div>
-
         <!-- Bear panel -->
         <div class="alerts-half bear">
           <div class="alerts-half-hdr bear">
@@ -311,14 +311,13 @@
             <div class="alerts-empty" id="bearEmpty">Watching for Δ &gt; 5%…</div>
           </div>
         </div>
-
       </div>
 
-      <!-- Full summary table -->
+      <!-- Ticker summary (filtered to >= value threshold) -->
       <div class="summary-section">
         <div class="panel-hdr">
           <div class="dot-live"></div>Ticker Summary
-          <span style="margin-left:auto;font-size:9px;color:var(--dim)">sorted by |Δ%| · refreshes every 5s</span>
+          <span style="margin-left:auto;font-size:9px;color:var(--dim)">≥ $ threshold · sorted by |Δ%|</span>
         </div>
         <div class="sum-wrap">
           <table id="sumTable">
@@ -334,31 +333,45 @@
           </table>
         </div>
         <div style="padding:4px 10px;font-size:9px;color:var(--dim);border-top:1px solid var(--border);">
-          * VWAP 2m = prior 60–120s window · alerts require Δ% threshold + &gt;$100k value + ≥5 trades · persists 5 min
+          * VWAP 2m = prior 60–120s · alerts: Δ% + &gt;$val + ≥5 trades · persists 5 min
         </div>
       </div>
     </div>
 
-    <!-- ── Col 2: Chart ───────────────────────────────────────────────────── -->
+    <!-- ── Col 2: Chart (top 55%) + News (bottom 45%) ─────────────────── -->
     <div class="col col-chart">
+
+      <!-- Chart controls -->
       <div class="chart-controls">
         <span class="ctrl-lbl">Symbol</span>
         <select id="symSel"><option value="">— select —</option></select>
         <div class="cur-price" id="curPrice">—</div>
         <div class="price-badge" id="priceBadge"></div>
-        <div class="win-badge">Last 5 min</div>
+        <div class="win-badge" id="winBadge">Today</div>
       </div>
       <div class="chart-wrap">
         <canvas id="priceChart"></canvas>
       </div>
-    </div>
 
+      <!-- News panel -->
+      <div class="news-section">
+        <div class="news-hdr">
+          📰 News
+          <span class="news-sym-badge" id="newsSym">—</span>
+          <span style="margin-left:auto;font-size:9px">7-day history · live stream</span>
+        </div>
+        <div class="news-scroll" id="newsPanel">
+          <div class="news-empty">Select an alert ticker to load news…</div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
-// CHART
+// CHART  (minute-level close-price line)
 // ══════════════════════════════════════════════════════════════════════════════
 const chartCtx = document.getElementById('priceChart').getContext('2d');
 const chart = new Chart(chartCtx, {
@@ -374,8 +387,8 @@ const chart = new Chart(chartCtx, {
     scales: {
       x: {
         type: 'time',
-        time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' }, tooltipFormat: 'HH:mm:ss.SSS' },
-        ticks: { color: '#8b949e', maxTicksLimit: 10, font: { family: 'Courier New', size: 11 } },
+        time: { unit: 'minute', displayFormats: { minute: 'HH:mm' }, tooltipFormat: 'HH:mm' },
+        ticks: { color: '#8b949e', maxTicksLimit: 12, font: { family: 'Courier New', size: 11 } },
         grid: { color: 'rgba(48,54,61,.5)' }, border: { color: '#30363d' },
       },
       y: {
@@ -388,7 +401,7 @@ const chart = new Chart(chartCtx, {
       tooltip: {
         backgroundColor: '#161b22', borderColor: '#30363d', borderWidth: 1,
         titleColor: '#8b949e', bodyColor: '#e6edf3',
-        callbacks: { label: c => `$${c.parsed.y.toFixed(4)}  ×  ${c.raw.sz || ''}` },
+        callbacks: { label: c => `$${c.parsed.y.toFixed(4)}` },
       },
     },
   },
@@ -397,35 +410,28 @@ const chart = new Chart(chartCtx, {
 // ══════════════════════════════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════════════════════════════
-// symbolData: sym → [{x:ms, y:price, sz:size}]  — kept for 5 min window
-const symbolData   = new Map();
-const lastPrice    = new Map();   // sym → last trade price
+const symbolData   = new Map();   // sym → [{x,y,sz}]  5-min raw ticks
+const lastPrice    = new Map();   // sym → last price
 const allSyms      = new Set();
-const alertHistory = new Map();   // sym → {row, firstTs, lastTs} — persists 5 min
+const alertHistory = new Map();   // sym → {row, firstTs, lastTs}
+let   chartBars    = [];          // [{t,o,h,l,c,v}] minute bars for selected sym
+const newsCache    = {};          // sym → article[]
 
-let selectedSym  = null;
-const rateWin    = [];
+let selectedSym = null;
+const rateWin   = [];
 
-const WIN_5M  = 5 * 60_000;
-const WIN_1M  =     60_000;
-const WIN_2M  = 2 * 60_000;
-let DELTA_THRESHOLD  = 5;       // percent  — live-adjustable via controls bar
-let VALUE_THRESHOLD  = 100_000; // min $ traded in 1m window — live-adjustable
-let SPEAK_COOLDOWN   = 120_000; // ms between re-speaking same ticker
+const WIN_5M = 5 * 60_000;
+const WIN_1M =     60_000;
+const WIN_2M = 2 * 60_000;
+let DELTA_THRESHOLD = 5;
+let VALUE_THRESHOLD = 100_000;
+let SPEAK_COOLDOWN  = 120_000;
+const ALERT_TTL     = 5 * 60_000;
 
 // ══════════════════════════════════════════════════════════════════════════════
-// TIME UTILS
+// UTILS
 // ══════════════════════════════════════════════════════════════════════════════
 const cutoff5m = () => Date.now() - WIN_5M;
-const cutoff1m = () => Date.now() - WIN_1M;
-const cutoff2m = () => Date.now() - WIN_2M;
-
-function msToTimeStr(ms) {
-  const d = new Date(ms);
-  return [d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()]
-    .map(n => String(n).padStart(2,'0')).join(':')
-    + '.' + String(d.getUTCMilliseconds()).padStart(3,'0');
-}
 
 function cleanData() {
   const cut = cutoff5m();
@@ -436,11 +442,14 @@ function cleanData() {
   }
 }
 
+function fmtDelta(d) { if (d == null) return '—'; return (d >= 0 ? '+' : '') + d.toFixed(2) + '%'; }
+function fmtPrice(p) { return p != null ? '$' + p.toFixed(2) : '—'; }
+function fmtVal(v)   { return v >= 1_000_000 ? '$'+(v/1_000_000).toFixed(2)+'M' : v >= 1000 ? '$'+(v/1000).toFixed(1)+'K' : '$'+v.toFixed(0); }
+
 // ══════════════════════════════════════════════════════════════════════════════
-// TICKER SUMMARY COMPUTATION
+// TICKER SUMMARY  (only rows >= VALUE_THRESHOLD shown)
 // ══════════════════════════════════════════════════════════════════════════════
 function calcVwap(pts) {
-  // Volume-weighted average price
   const sumPV = pts.reduce((s, p) => s + p.y * (p.sz || 0), 0);
   const sumV  = pts.reduce((s, p) => s + (p.sz || 0), 0);
   return sumV > 0 ? sumPV / sumV : pts[pts.length - 1].y;
@@ -448,42 +457,36 @@ function calcVwap(pts) {
 
 function computeSummary() {
   const now  = Date.now();
-  const c1m  = now - WIN_1M;   // last 1 min:  [c1m,  now)
-  const c2ms = now - WIN_2M;   // prior 1 min: [c2ms, c1m)
+  const c1m  = now - WIN_1M;
+  const c2ms = now - WIN_2M;
   const rows = [];
 
   for (const [sym, pts] of symbolData) {
     const pts1m = pts.filter(p => p.x >= c1m);
     const pts2m = pts.filter(p => p.x >= c2ms && p.x < c1m);
+    if (pts1m.length < 5) continue;                      // min 5 trades
 
-    if (pts1m.length < 5) continue;   // ← min 5 trades in the last minute
+    const value1m = pts1m.reduce((s, p) => s + p.y * (p.sz || 0), 0);
+    if (value1m < VALUE_THRESHOLD) continue;              // below $ threshold — skip entirely
 
-    const vol1m   = pts1m.reduce((s, p) => s + (p.sz || 0), 0);
-    const value1m = pts1m.reduce((s, p) => s + p.y * (p.sz || 0), 0); // $ traded in 1m window
-    const cnt1m   = pts1m.length;
+    const cnt1m  = pts1m.length;
+    const vwap1m = calcVwap(pts1m);
+    const vwap2m = pts2m.length ? calcVwap(pts2m) : null;
+    const delta  = vwap2m != null ? ((vwap1m - vwap2m) / vwap2m) * 100 : null;
 
-    const vwap1m  = calcVwap(pts1m);
-    const vwap2m  = pts2m.length ? calcVwap(pts2m) : null;
-
-    // Delta: VWAP this minute vs VWAP last minute
-    const delta = vwap2m != null ? ((vwap1m - vwap2m) / vwap2m) * 100 : null;
-
-    rows.push({ sym, vol1m, value1m, vwap1m, vwap2m, delta, cnt1m });
+    rows.push({ sym, value1m, vwap1m, vwap2m, delta, cnt1m });
   }
 
-  // Sort by |Δ%| desc, then by $ value desc
   rows.sort((a, b) => {
     const da = a.delta != null ? Math.abs(a.delta) : -1;
     const db = b.delta != null ? Math.abs(b.delta) : -1;
-    if (da !== db) return db - da;
-    return b.value1m - a.value1m;
+    return da !== db ? db - da : b.value1m - a.value1m;
   });
-
   return rows;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// RENDER: SUMMARY TABLE + SPLIT ALERTS
+// RENDER: SPLIT ALERTS + SUMMARY TABLE
 // ══════════════════════════════════════════════════════════════════════════════
 const sumBody  = document.getElementById('sumBody');
 const bullWrap = document.getElementById('bullWrap');
@@ -491,37 +494,22 @@ const bearWrap = document.getElementById('bearWrap');
 const bullEmpty= document.getElementById('bullEmpty');
 const bearEmpty= document.getElementById('bearEmpty');
 
-const ALERT_TTL = 5 * 60_000;   // keep alerts visible for 5 minutes
-
-function fmtDelta(d) {
-  if (d == null) return '—';
-  return (d >= 0 ? '+' : '') + d.toFixed(2) + '%';
-}
-function fmtPrice(p) { return p != null ? '$' + p.toFixed(2) : '—'; }
-function fmtVol(v)   { return v >= 1_000_000 ? (v/1_000_000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : v.toString(); }
-function fmtVal(v)   { return v >= 1_000_000 ? '$'+(v/1_000_000).toFixed(2)+'M' : v >= 1000 ? '$'+(v/1000).toFixed(1)+'K' : '$'+v.toFixed(0); }
-
 function buildAlertRow(r, ts) {
-  const bull = r.delta > 0;
-  const age  = Date.now() - ts;
-  const stale = age > 4 * 60_000;   // fade after 4 min, expires at 5 min
-  const ageStr = age < 60_000
-    ? Math.floor(age / 1000) + 's ago'
-    : Math.floor(age / 60_000) + 'm ago';
-  const div = document.createElement('div');
+  const bull   = r.delta > 0;
+  const age    = Date.now() - ts;
+  const stale  = age > 4 * 60_000;
+  const ageStr = age < 60_000 ? Math.floor(age / 1000) + 's ago' : Math.floor(age / 60_000) + 'm ago';
+  const div    = document.createElement('div');
   div.className = 'alert-row ' + (bull ? 'bull' : 'bear') + (stale ? ' stale' : '');
   div.innerHTML =
     `<div class="ar-top">` +
       `<span class="ar-sym">${r.sym}</span>` +
       `<span class="ar-delta ${bull ? 'bull' : 'bear'}">${fmtDelta(r.delta)}</span>` +
       `<span class="ar-val">${fmtVal(r.value1m)}</span>` +
-      `<span class="ar-time">${new Date(ts).toTimeString().slice(0,8)}<span class="ar-age">${ageStr}</span></span>` +
+      `<span class="ar-time">${new Date(ts).toTimeString().slice(0,8)}<span class="ar-age"> ${ageStr}</span></span>` +
     `</div>` +
-    `<div class="ar-sub">` +
-      `VWAP 1m <b style="color:var(--text)">${fmtPrice(r.vwap1m)}</b>` +
-      ` vs 2m <b style="color:var(--dim)">${fmtPrice(r.vwap2m)}</b>` +
-      ` · ${r.cnt1m} trades` +
-    `</div>`;
+    `<div class="ar-sub">VWAP 1m <b style="color:var(--text)">${fmtPrice(r.vwap1m)}</b>` +
+    ` vs 2m <b style="color:var(--dim)">${fmtPrice(r.vwap2m)}</b> · ${r.cnt1m} trades</div>`;
   div.addEventListener('click', () => selectSym(r.sym));
   return div;
 }
@@ -529,16 +517,15 @@ function buildAlertRow(r, ts) {
 function renderSummary(rows) {
   const now = Date.now();
 
-  // ── 1. Qualify fresh alerts ───────────────────────────────────
+  // ── 1. Qualify fresh alerts ────────────────────────────────────────────
   const freshAlerts = rows.filter(r =>
-    r.delta != null &&
-    Math.abs(r.delta) >= DELTA_THRESHOLD &&
-    r.value1m >= VALUE_THRESHOLD
+    r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD
   );
 
-  // ── 2. Merge into alertHistory (upsert: update row data, keep firstTs) ──
+  // ── 2. Update alertHistory; auto-select on first new spike ────────────
   for (const r of freshAlerts) {
     const existing = alertHistory.get(r.sym);
+    if (!existing && !selectedSym) selectSym(r.sym);   // auto-select first spike
     alertHistory.set(r.sym, {
       row:     r,
       firstTs: existing ? existing.firstTs : now,
@@ -546,165 +533,230 @@ function renderSummary(rows) {
     });
   }
 
-  // ── 3. Expire entries older than 5 min since last seen ────────
-  for (const [sym, entry] of alertHistory) {
-    if (now - entry.lastTs > ALERT_TTL) alertHistory.delete(sym);
-  }
+  // ── 3. Expire entries ─────────────────────────────────────────────────
+  for (const [sym, e] of alertHistory)
+    if (now - e.lastTs > ALERT_TTL) alertHistory.delete(sym);
 
-  // ── 4. Split history into bull / bear ─────────────────────────
+  // ── 4. Split + sort ────────────────────────────────────────────────────
   const bulls = [], bears = [];
-  for (const [, entry] of alertHistory) {
-    (entry.row.delta > 0 ? bulls : bears).push(entry);
-  }
-  // Sort each side by |Δ%| desc
+  for (const [, e] of alertHistory) (e.row.delta > 0 ? bulls : bears).push(e);
   const byDelta = (a, b) => Math.abs(b.row.delta) - Math.abs(a.row.delta);
   bulls.sort(byDelta); bears.sort(byDelta);
 
-  // Speak new (fresh) alerts
   speakAlerts(freshAlerts);
 
-  // Update stats / chart dropdown based on ALL history entries
-  const allActive = [...alertHistory.values()].map(e => e.row);
   document.getElementById('sAlerts').textContent = alertHistory.size;
   document.getElementById('sAlerts').className   = 'stat-val ' + (alertHistory.size ? 'r' : '');
-  updateChartDropdown(allActive);
+  updateChartDropdown([...bulls, ...bears].map(e => e.row));
 
-  // ── 5. Render bull panel ──────────────────────────────────────
+  // ── 5. Bull panel ──────────────────────────────────────────────────────
   document.getElementById('bullCount').textContent = bulls.length || '0';
   document.getElementById('bullCount').className   = 'half-count ' + (bulls.length ? 'bull' : 'none');
   bullWrap.replaceChildren();
-  if (!bulls.length) {
-    bullWrap.appendChild(bullEmpty);
-    bullEmpty.style.display = '';
-  } else {
+  if (!bulls.length) { bullWrap.appendChild(bullEmpty); bullEmpty.style.display = ''; }
+  else {
     bullEmpty.style.display = 'none';
-    const frag = document.createDocumentFragment();
-    for (const e of bulls) frag.appendChild(buildAlertRow(e.row, e.firstTs));
-    bullWrap.appendChild(frag);
+    const f = document.createDocumentFragment();
+    bulls.forEach(e => f.appendChild(buildAlertRow(e.row, e.firstTs)));
+    bullWrap.appendChild(f);
   }
 
-  // ── 6. Render bear panel ──────────────────────────────────────
+  // ── 6. Bear panel ──────────────────────────────────────────────────────
   document.getElementById('bearCount').textContent = bears.length || '0';
   document.getElementById('bearCount').className   = 'half-count ' + (bears.length ? 'bear' : 'none');
   bearWrap.replaceChildren();
-  if (!bears.length) {
-    bearWrap.appendChild(bearEmpty);
-    bearEmpty.style.display = '';
-  } else {
+  if (!bears.length) { bearWrap.appendChild(bearEmpty); bearEmpty.style.display = ''; }
+  else {
     bearEmpty.style.display = 'none';
-    const frag = document.createDocumentFragment();
-    for (const e of bears) frag.appendChild(buildAlertRow(e.row, e.firstTs));
-    bearWrap.appendChild(frag);
+    const f = document.createDocumentFragment();
+    bears.forEach(e => f.appendChild(buildAlertRow(e.row, e.firstTs)));
+    bearWrap.appendChild(f);
   }
 
-  // ── 7. Summary table ─────────────────────────────────────────
-  const frag2 = document.createDocumentFragment();
+  // ── 7. Summary table ─────────────────────────────────────────────────
+  const frag = document.createDocumentFragment();
   for (const r of rows) {
-    const tr   = document.createElement('tr');
-    const bull = r.delta != null && r.delta > 0;
-    const flagged = r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD && r.value1m >= VALUE_THRESHOLD;
+    const tr      = document.createElement('tr');
+    const bull    = r.delta != null && r.delta > 0;
+    const flagged = r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD;
     if (flagged) tr.className = bull ? 'hl-bull' : 'hl-bear';
-
-    const dClass   = r.delta == null ? 'delta-nil' : (bull ? 'delta-pos' : (r.delta < 0 ? 'delta-neg' : 'delta-nil'));
-    const flag     = flagged ? (bull ? ' 🔥' : ' 🔻') : '';
-    const valColor = r.value1m >= VALUE_THRESHOLD ? 'color:var(--yellow)' : 'color:var(--dim)';
-
+    const dClass = r.delta == null ? 'delta-nil' : (bull ? 'delta-pos' : (r.delta < 0 ? 'delta-neg' : 'delta-nil'));
+    const flag   = flagged ? (bull ? ' 🔥' : ' 🔻') : '';
     tr.innerHTML =
       `<td class="sym">${r.sym}</td>` +
-      `<td class="r" style="${valColor}">${fmtVal(r.value1m)}</td>` +
+      `<td class="r" style="color:var(--yellow)">${fmtVal(r.value1m)}</td>` +
       `<td class="r">${fmtPrice(r.vwap1m)}</td>` +
       `<td class="r" style="color:var(--dim)">${fmtPrice(r.vwap2m)}</td>` +
       `<td class="r ${dClass}">${fmtDelta(r.delta)}${flag}</td>` +
       `<td class="r" style="color:var(--dim)">${r.cnt1m}</td>`;
     tr.addEventListener('click', () => selectSym(r.sym));
-    frag2.appendChild(tr);
+    frag.appendChild(tr);
   }
-  sumBody.replaceChildren(frag2);
+  sumBody.replaceChildren(frag);
 }
 
-function refreshSummary() {
-  const rows = computeSummary();
-  renderSummary(rows);
-}
+function refreshSummary() { renderSummary(computeSummary()); }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SYMBOL SELECTOR
 // ══════════════════════════════════════════════════════════════════════════════
 const symSel = document.getElementById('symSel');
-symSel.addEventListener('change', () => { selectedSym = symSel.value || null; rebuildChart(); });
+symSel.addEventListener('change', () => {
+  const v = symSel.value || null;
+  if (v) selectSym(v);
+  else { selectedSym = null; chartBars = []; rebuildMinuteChart(); }
+});
 
-function registerSym(sym) {
-  // Just track in allSyms — chart dropdown is driven by alerts only
-  allSyms.add(sym);
-}
+function registerSym(sym) { allSyms.add(sym); }
 
 function updateChartDropdown(alerts) {
-  // Rebuild dropdown with only currently alerted symbols (sorted by |Δ%|)
   const prev = selectedSym;
-  // Clear all options except placeholder
   while (symSel.options.length > 1) symSel.remove(1);
-
   for (const r of alerts) {
     const opt = document.createElement('option');
     opt.value = r.sym;
     opt.textContent = `${r.sym}  ${r.delta >= 0 ? '🔥' : '🔻'} ${r.delta.toFixed(1)}%`;
     symSel.appendChild(opt);
   }
-
-  // Re-select previous or auto-pick top alert
-  if (alerts.length) {
-    const keep = alerts.find(r => r.sym === prev);
-    selectedSym = keep ? prev : alerts[0].sym;
-    symSel.value = selectedSym;
-    rebuildChart();
-  } else {
-    selectedSym = null;
-    symSel.value = '';
-    rebuildChart();
-  }
+  if (prev && alerts.find(r => r.sym === prev)) symSel.value = prev;
 }
 
 function selectSym(sym) {
+  if (selectedSym === sym) return;   // already selected
   selectedSym = sym;
   symSel.value = sym;
-  rebuildChart();
+  loadBarsAndNews(sym);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// CHART
+// BARS + NEWS LOADER
 // ══════════════════════════════════════════════════════════════════════════════
-function rebuildChart() {
-  const pts = selectedSym ? (symbolData.get(selectedSym) || []) : [];
-  chart.data.datasets[0].data  = pts.map(p => ({ x: p.x, y: p.y, sz: p.sz }));
+async function loadBarsAndNews(sym) {
+  if (!sym) return;
+
+  // ── bars ──────────────────────────────────────────────────────────────────
+  document.getElementById('winBadge').textContent = '…loading';
+  try {
+    const res  = await fetch(`/bars/${sym}`);
+    const data = await res.json();
+    chartBars = data.bars || [];
+    rebuildMinuteChart();
+  } catch {
+    document.getElementById('winBadge').textContent = 'Error';
+  }
+
+  // ── news ──────────────────────────────────────────────────────────────────
+  document.getElementById('newsSym').textContent    = sym;
+  document.getElementById('newsPanel').innerHTML    = '<div class="news-loading">Loading news…</div>';
+  try {
+    const res  = await fetch(`/news/${sym}`);
+    const data = await res.json();
+    newsCache[sym] = data.articles || [];
+    renderNews(newsCache[sym], sym);
+  } catch {
+    document.getElementById('newsPanel').innerHTML = '<div class="news-empty">Failed to load news.</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MINUTE CHART
+// ══════════════════════════════════════════════════════════════════════════════
+function rebuildMinuteChart() {
+  const badge = document.getElementById('priceBadge');
+  if (!chartBars.length) {
+    chart.data.datasets[0].data = [];
+    chart.update('none');
+    document.getElementById('curPrice').textContent = '—';
+    badge.style.display = 'none';
+    document.getElementById('winBadge').textContent = 'Today';
+    return;
+  }
+  chart.data.datasets[0].data  = chartBars.map(b => ({ x: b.t, y: b.c }));
   chart.data.datasets[0].label = selectedSym || 'Price';
   chart.update('none');
-  refreshPriceDisplay();
+
+  const last = chartBars[chartBars.length - 1];
+  const open = chartBars[0];
+  document.getElementById('curPrice').textContent   = '$' + last.c.toFixed(2);
+  document.getElementById('winBadge').textContent   = chartBars.length + ' bars';
+
+  const diff = last.c - open.o;
+  const pct  = (diff / open.o) * 100;
+  badge.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(2) + ' (' + pct.toFixed(2) + '%)';
+  badge.className   = 'price-badge ' + (diff >= 0 ? 'up' : 'down');
+  badge.style.display = '';
 }
 
-function appendChartPoint(pt) {
-  const ds  = chart.data.datasets[0].data;
-  ds.push({ x: pt.x, y: pt.y, sz: pt.sz });
-  const cut = cutoff5m();
-  let i = 0; while (i < ds.length && ds[i].x < cut) i++;
-  if (i) ds.splice(0, i);
-  chart.update('none');
+function updateLiveBar(price, ts_ms) {
+  if (!chartBars.length) return;
+  const min_key = Math.floor(ts_ms / 60_000) * 60_000;
+  const last    = chartBars[chartBars.length - 1];
+  const ds      = chart.data.datasets[0].data;
+
+  if (last.t === min_key) {
+    last.c = price;
+    if (price > last.h) last.h = price;
+    if (price < last.l) last.l = price;
+    if (ds.length) { ds[ds.length - 1].y = price; chart.update('none'); }
+  } else if (min_key > last.t) {
+    chartBars.push({ t: min_key, o: price, h: price, l: price, c: price, v: 0 });
+    ds.push({ x: min_key, y: price });
+    chart.update('none');
+  }
+  document.getElementById('curPrice').textContent = '$' + price.toFixed(2);
 }
 
-function refreshPriceDisplay() {
-  const cur   = document.getElementById('curPrice');
-  const badge = document.getElementById('priceBadge');
-  if (!selectedSym) { cur.textContent = '—'; badge.style.display = 'none'; return; }
-  const p = lastPrice.get(selectedSym);
-  if (p == null) { cur.textContent = '—'; badge.style.display = 'none'; return; }
-  cur.textContent = '$' + p.toFixed(2);
-  const pts = symbolData.get(selectedSym);
-  if (pts && pts.length >= 2) {
-    const diff = p - pts[0].y;
-    const pct  = (diff / pts[0].y) * 100;
-    badge.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(2)} (${pct.toFixed(2)}%)`;
-    badge.className   = 'price-badge ' + (diff >= 0 ? 'up' : 'down');
-    badge.style.display = '';
-  } else badge.style.display = 'none';
+// ══════════════════════════════════════════════════════════════════════════════
+// NEWS RENDER
+// ══════════════════════════════════════════════════════════════════════════════
+function fmtNewsAge(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 3_600_000)  return Math.floor(diff / 60_000) + 'm ago';
+  if (diff < 86_400_000) return Math.floor(diff / 3_600_000) + 'h ago';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function newsItemHTML(a) {
+  const symsHtml = a.symbols && a.symbols.length
+    ? `<span class="news-syms">${a.symbols.slice(0,6).join(' · ')}</span>` : '';
+  return (
+    `<div class="news-headline"><a href="${a.url || '#'}" target="_blank" rel="noopener">${a.headline || '(no headline)'}</a></div>` +
+    (a.summary ? `<div class="news-summary">${a.summary.slice(0, 160)}${a.summary.length > 160 ? '…' : ''}</div>` : '') +
+    `<div class="news-meta">` +
+      `<span class="news-source">${a.source || '—'}</span>` +
+      `<span class="news-time">${fmtNewsAge(a.created_at)}</span>` +
+      symsHtml +
+    `</div>`
+  );
+}
+
+function renderNews(articles, sym) {
+  const panel = document.getElementById('newsPanel');
+  if (!articles || !articles.length) {
+    panel.innerHTML = `<div class="news-empty">No news found for ${sym} in the last 7 days.</div>`;
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  for (const a of articles) {
+    const div = document.createElement('div');
+    div.className = 'news-item';
+    div.innerHTML = newsItemHTML(a);
+    frag.appendChild(div);
+  }
+  panel.replaceChildren(frag);
+}
+
+function prependNewsItem(article) {
+  const panel = document.getElementById('newsPanel');
+  const div   = document.createElement('div');
+  div.className = 'news-item news-fresh';
+  div.innerHTML = newsItemHTML(article);
+  // Remove placeholder if present
+  const placeholder = panel.querySelector('.news-empty, .news-loading');
+  if (placeholder) panel.replaceChildren(div);
+  else             panel.insertBefore(div, panel.firstChild);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -721,27 +773,20 @@ function updateStats() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// CORE TRADE PROCESSOR
+// TRADE PROCESSOR
 // ══════════════════════════════════════════════════════════════════════════════
 function processBatch(trades) {
   if (!trades.length) return;
   const cut = cutoff5m();
-  let chartHit = false;
-
   for (const t of trades) {
     if (t.ts_ms < cut) continue;
     rateWin.push(Date.now());
     registerSym(t.symbol);
-
     if (!symbolData.has(t.symbol)) symbolData.set(t.symbol, []);
-    const pt = { x: t.ts_ms, y: t.price, sz: t.size };
-    symbolData.get(t.symbol).push(pt);
-
+    symbolData.get(t.symbol).push({ x: t.ts_ms, y: t.price, sz: t.size });
     lastPrice.set(t.symbol, t.price);
-    if (t.symbol === selectedSym) { appendChartPoint(pt); chartHit = true; }
+    if (t.symbol === selectedSym) updateLiveBar(t.price, t.ts_ms);
   }
-
-  if (chartHit) refreshPriceDisplay();
   updateStats();
 }
 
@@ -754,7 +799,6 @@ function processInit(trades) {
     symbolData.get(t.symbol).push({ x: t.ts_ms, y: t.price, sz: t.size });
     lastPrice.set(t.symbol, t.price);
   }
-  rebuildChart();
   refreshSummary();
   updateStats();
 }
@@ -762,7 +806,7 @@ function processInit(trades) {
 // ══════════════════════════════════════════════════════════════════════════════
 // WEBSOCKET
 // ══════════════════════════════════════════════════════════════════════════════
-let ws, reconnTimer;
+let ws, reconnTimer, summaryDebounce;
 
 function connect() {
   const statusEl = document.getElementById('status');
@@ -771,17 +815,30 @@ function connect() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(`${proto}//${location.host}/ws`);
 
-  ws.onopen  = () => { statusEl.textContent = '● CONNECTED'; statusEl.className = 'connected'; clearTimeout(reconnTimer); };
+  ws.onopen  = () => { statusEl.textContent = '● CONNECTED';    statusEl.className = 'connected';    clearTimeout(reconnTimer); };
   ws.onclose = () => { statusEl.textContent = '● RECONNECTING…'; statusEl.className = 'disconnected'; reconnTimer = setTimeout(connect, 3000); };
   ws.onerror = () => ws.close();
 
   ws.onmessage = (e) => {
     let msg; try { msg = JSON.parse(e.data); } catch { return; }
-    if      (msg.type === 'init') processInit(msg.data || []);
-    else if (msg.type === 'ping') { /* keep-alive */ }
-    else if (Array.isArray(msg))  {
+
+    if (msg.type === 'init') {
+      processInit(msg.data || []);
+    } else if (msg.type === 'ping') {
+      // keep-alive — no action
+    } else if (msg.type === 'news_item') {
+      const a = msg.data;
+      // Cache per symbol
+      for (const sym of (a.symbols || [])) {
+        if (!newsCache[sym]) newsCache[sym] = [];
+        newsCache[sym].unshift(a);
+      }
+      // Inject into open news panel if relevant
+      if (selectedSym && a.symbols && a.symbols.includes(selectedSym)) {
+        prependNewsItem(a);
+      }
+    } else if (Array.isArray(msg)) {
       processBatch(msg);
-      // Debounce summary refresh: rebuild at most every 2 s on incoming data
       clearTimeout(summaryDebounce);
       summaryDebounce = setTimeout(refreshSummary, 2000);
     }
@@ -793,78 +850,71 @@ connect();
 // ══════════════════════════════════════════════════════════════════════════════
 // PERIODIC TASKS
 // ══════════════════════════════════════════════════════════════════════════════
-let summaryDebounce;
-setInterval(() => { cleanData(); updateStats(); refreshPriceDisplay(); }, 10_000);
+setInterval(() => { cleanData(); updateStats(); }, 10_000);
 setInterval(updateStats, 1_000);
 setInterval(refreshSummary, 5_000);
 
+// Silently refresh minute bars every 5 min to pick up any gaps
+setInterval(() => {
+  if (!selectedSym) return;
+  fetch(`/bars/${selectedSym}`)
+    .then(r => r.json())
+    .then(d => { chartBars = d.bars || []; rebuildMinuteChart(); })
+    .catch(() => {});
+}, 5 * 60_000);
+
 // ══════════════════════════════════════════════════════════════════════════════
-// VOICE ALERTS  (Web Speech API)
+// VOICE ALERTS
 // ══════════════════════════════════════════════════════════════════════════════
-let voiceOn   = true;
-const lastSpoken = new Map();   // sym → timestamp of last speech
+let voiceOn = true;
+const lastSpoken = new Map();
 
 function speakAlert(r) {
-  if (!voiceOn) return;
-  if (!window.speechSynthesis) return;
-
+  if (!voiceOn || !window.speechSynthesis) return;
   const now  = Date.now();
-  const last = lastSpoken.get(r.sym) || 0;
-  if (now - last < SPEAK_COOLDOWN) return;   // still in cooldown
+  if (now - (lastSpoken.get(r.sym) || 0) < SPEAK_COOLDOWN) return;
   lastSpoken.set(r.sym, now);
-
-  // Cancel any queued speech so urgent alerts aren't buried
   window.speechSynthesis.cancel();
-
-  const dir  = r.delta > 0 ? 'up' : 'down';
-  const pct  = Math.abs(r.delta).toFixed(1).replace('.', ' point ');
-  const val  = fmtVal(r.value1m);
-  const text = `${r.sym.split('').join(' ')} — ${dir} ${pct} percent. Value ${val}`;
-
-  const utter    = new SpeechSynthesisUtterance(text);
-  utter.rate     = 1.05;
-  utter.pitch    = r.delta > 0 ? 1.15 : 0.85;   // higher pitch for bulls, lower for bears
-  utter.volume   = 1;
+  const dir   = r.delta > 0 ? 'up' : 'down';
+  const pct   = Math.abs(r.delta).toFixed(1).replace('.', ' point ');
+  const utter = new SpeechSynthesisUtterance(
+    `${r.sym.split('').join(' ')} — ${dir} ${pct} percent. Value ${fmtVal(r.value1m)}`
+  );
+  utter.rate  = 1.05;
+  utter.pitch = r.delta > 0 ? 1.15 : 0.85;
   window.speechSynthesis.speak(utter);
-
   document.getElementById('voiceStatus').textContent =
     `spoke ${r.sym} at ${new Date().toTimeString().slice(0,8)}`;
 }
 
-// Called from renderSummary — speak each qualifying alert
-function speakAlerts(alerts) {
-  for (const r of alerts) speakAlert(r);
-}
+function speakAlerts(alerts) { for (const r of alerts) speakAlert(r); }
 
-// ── Voice button toggle ───────────────────────────────────────────────────────
-const voiceBtn = document.getElementById('voiceBtn');
-voiceBtn.addEventListener('click', () => {
+document.getElementById('voiceBtn').addEventListener('click', () => {
   voiceOn = !voiceOn;
-  voiceBtn.textContent = voiceOn ? '🔊 Voice ON' : '🔇 Voice OFF';
-  voiceBtn.className   = voiceOn ? 'voice-btn on' : 'voice-btn off';
+  const btn = document.getElementById('voiceBtn');
+  btn.textContent = voiceOn ? '🔊 Voice ON' : '🔇 Voice OFF';
+  btn.className   = voiceOn ? 'voice-btn on' : 'voice-btn off';
   if (!voiceOn) window.speechSynthesis.cancel();
 });
 
-// ── Test voice button ─────────────────────────────────────────────────────────
 document.getElementById('testBtn').addEventListener('click', () => {
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance('Alert test. A A P L — up 6 point 2 percent. Value 250 K');
-  utter.rate  = 1.05;
-  window.speechSynthesis.speak(utter);
+  window.speechSynthesis.speak(
+    new SpeechSynthesisUtterance('Alert test. A A P L — up 6 point 2 percent. Value 250 K')
+  );
 });
 
-// ── Cooldown slider ───────────────────────────────────────────────────────────
 document.getElementById('ctrlCooldown').addEventListener('input', e => {
   SPEAK_COOLDOWN = (parseFloat(e.target.value) || 120) * 1000;
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// LIVE THRESHOLD CONTROLS
+// THRESHOLD CONTROLS
 // ══════════════════════════════════════════════════════════════════════════════
 function updateThreshLabel() {
   const vK = VALUE_THRESHOLD >= 1_000_000
-    ? (VALUE_THRESHOLD/1_000_000).toFixed(1)+'M'
-    : (VALUE_THRESHOLD/1_000).toFixed(0)+'K';
+    ? (VALUE_THRESHOLD / 1_000_000).toFixed(1) + 'M'
+    : (VALUE_THRESHOLD / 1_000).toFixed(0) + 'K';
   document.getElementById('sAlertThresh').textContent = `${DELTA_THRESHOLD}%·$${vK}`;
 }
 

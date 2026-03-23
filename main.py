@@ -1,9 +1,9 @@
 """
 Alpaca Live Trade Stream — FastAPI backend
 - Streams all trades via Alpaca StockDataStream (SIP feed)
-- Keeps only the last 5 minutes of data in memory
-- Broadcasts trades to all WebSocket clients in real-time
-- Serves the frontend from static/index.html
+- Aggregates ticks into 1-min OHLCV bars (whole day)
+- Streams news via NewsDataStream + 7-day history via NewsClient REST
+- Broadcasts trades/news to WebSocket; serves /bars and /news REST endpoints
 """
 
 import asyncio
@@ -15,9 +15,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from queue import Empty, Queue
 
+import pytz
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 try:
     from dotenv import load_dotenv
@@ -27,72 +28,108 @@ except ImportError:
 
 from alpaca.data.enums import DataFeed
 from alpaca.data.live.stock import StockDataStream
+from alpaca.data.live.news import NewsDataStream
+from alpaca.data.historical import StockHistoricalDataClient, NewsClient
+from alpaca.data.requests import StockBarsRequest, NewsRequest
+from alpaca.data.timeframe import TimeFrame
 
-# ── Config ──────────────────────────────────────────────────────────────────
+# ── Config ────────────────────────────────────────────────────────────────────
 API_KEY    = os.getenv("ALPACA_API_KEY", "")
 SECRET_KEY = os.getenv("ALPACA_SECRET_KEY", "")
-MAX_AGE_SECONDS = 300  # 5 minutes
 
 if not API_KEY or not SECRET_KEY:
     raise RuntimeError(
         "Missing API keys. Set ALPACA_API_KEY and ALPACA_SECRET_KEY in .env"
     )
 
-# ── App ──────────────────────────────────────────────────────────────────────
+ET = pytz.timezone("America/New_York")
+BAD_CONDITIONS = {"U", "W", "Z"}   # keep T (extended hours) and V (contingent)
+
+# ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Alpaca Trade Stream")
+app.add_middleware(CORSMiddleware, allow_origins=["*"],
+                   allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ── In-memory stores ──────────────────────────────────────────────────────────
+trades_store: deque            = deque(maxlen=200_000)
+minute_bars:  dict[str, dict]  = {}   # sym → {min_ts_ms: {t,o,h,l,c,v}}
+news_store:   dict[str, list]  = {}   # sym → [article, ...] most-recent-first
 
-# ── State ────────────────────────────────────────────────────────────────────
-trades_store: deque        = deque(maxlen=200_000)   # rolling buffer
-trade_queue:  Queue        = Queue(maxsize=100_000)  # thread-safe bridge
-clients:      set[WebSocket] = set()
+# ── Queues ────────────────────────────────────────────────────────────────────
+trade_queue: Queue = Queue(maxsize=100_000)
+news_queue:  Queue = Queue(maxsize=10_000)
+
+# ── WebSocket clients ─────────────────────────────────────────────────────────
+clients: set[WebSocket] = set()
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def to_utc(ts) -> datetime:
+    if hasattr(ts, "to_pydatetime"):
+        ts = ts.to_pydatetime()
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts.astimezone(timezone.utc)
+
+
+def serialize(trade: dict) -> dict:
+    return {k: v for k, v in trade.items() if not k.startswith("_")}
+
+
 def get_cutoff() -> datetime:
-    return datetime.now(timezone.utc) - timedelta(seconds=MAX_AGE_SECONDS)
+    return datetime.now(timezone.utc) - timedelta(minutes=5)
+
+
+def recent_trades(n: int = 2000) -> list[dict]:
+    cutoff = get_cutoff()
+    return [serialize(t) for t in trades_store if t["_ts"] >= cutoff][-n:]
 
 
 def cleanup() -> None:
-    """Remove trades older than MAX_AGE_SECONDS from the front of the deque."""
     cutoff = get_cutoff()
     while trades_store and trades_store[0]["_ts"] < cutoff:
         trades_store.popleft()
 
 
-def to_utc(ts) -> datetime:
-    """Convert any timestamp to a UTC-aware datetime."""
-    if hasattr(ts, "to_pydatetime"):
-        ts = ts.to_pydatetime()
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
-    return ts
+def aggregate_tick(sym: str, price: float, size: int, ts_ms: int) -> None:
+    """Roll a single tick into the per-symbol 1-min OHLCV bar."""
+    min_key = (ts_ms // 60_000) * 60_000
+    bars = minute_bars.setdefault(sym, {})
+    if min_key not in bars:
+        bars[min_key] = {"t": min_key, "o": price, "h": price,
+                         "l": price, "c": price, "v": size}
+    else:
+        b = bars[min_key]
+        if price > b["h"]: b["h"] = price
+        if price < b["l"]: b["l"] = price
+        b["c"] = price
+        b["v"] += size
 
 
-def serialize(trade: dict) -> dict:
-    """Strip internal fields (prefixed _) before sending to clients."""
-    return {k: v for k, v in trade.items() if not k.startswith("_")}
+def article_to_dict(a) -> dict:
+    return {
+        "id":         str(getattr(a, "id", "")),
+        "headline":   getattr(a, "headline", "") or "",
+        "summary":    getattr(a, "summary",  "") or "",
+        "url":        getattr(a, "url",      "") or "",
+        "source":     getattr(a, "source",   "") or "",
+        "created_at": a.created_at.isoformat() if getattr(a, "created_at", None) else "",
+        "symbols":    getattr(a, "symbols",  []) or [],
+    }
 
 
-def recent_trades() -> list[dict]:
-    cutoff = get_cutoff()
-    return [serialize(t) for t in trades_store if t["_ts"] >= cutoff]
-
-
-# ── Alpaca stream (runs in its own thread + event loop) ──────────────────────
+# ── Trade stream ──────────────────────────────────────────────────────────────
 async def handle_trade(data) -> None:
-    # ── Filter: only short tickers (≤ 4 chars, e.g. AAPL, TSLA, not GOOGL) ──
     if len(data.symbol) > 4:
+        return
+    if data.conditions and any(c in BAD_CONDITIONS for c in data.conditions):
         return
 
     ts = to_utc(data.timestamp)
     ms = int(ts.timestamp() * 1000)
+
+    aggregate_tick(data.symbol, float(data.price), int(data.size or 0), ms)
+
     trade = {
         "symbol": data.symbol,
         "price":  float(data.price),
@@ -104,16 +141,41 @@ async def handle_trade(data) -> None:
     try:
         trade_queue.put_nowait(trade)
     except Exception:
-        pass  # drop when queue is full (extreme load)
+        pass
 
 
-def run_stream() -> None:
+def run_trade_stream() -> None:
     stream = StockDataStream(API_KEY, SECRET_KEY, feed=DataFeed.SIP)
     stream.subscribe_trades(handle_trade, "*")
     stream.run()
 
 
-# ── FastAPI background task: drain queue → store + broadcast ─────────────────
+# ── News stream ───────────────────────────────────────────────────────────────
+async def handle_news(data) -> None:
+    article = article_to_dict(data)
+    # Store per-symbol (and under "*" for market-wide news)
+    targets = article["symbols"] if article["symbols"] else ["*"]
+    for sym in targets:
+        bucket = news_store.setdefault(sym, [])
+        bucket.insert(0, article)
+        if len(bucket) > 200:
+            del bucket[200:]
+    try:
+        news_queue.put_nowait({"type": "news_item", "data": article})
+    except Exception:
+        pass
+
+
+def run_news_stream() -> None:
+    try:
+        nstream = NewsDataStream(API_KEY, SECRET_KEY)
+        nstream.subscribe_news(handle_news, "*")
+        nstream.run()
+    except Exception as exc:
+        print(f"[news-stream] failed to start: {exc}")
+
+
+# ── WebSocket broadcast ───────────────────────────────────────────────────────
 async def broadcast(msg: str) -> None:
     dead = set()
     for ws in list(clients):
@@ -125,8 +187,9 @@ async def broadcast(msg: str) -> None:
 
 
 async def queue_processor() -> None:
-    """Drain up to 300 trades every 20 ms and broadcast them."""
+    """Drain trade + news queues every 20 ms and push to all WebSocket clients."""
     while True:
+        # ── trades ────────────────────────────────────────────────────────────
         batch = []
         try:
             while len(batch) < 300:
@@ -139,57 +202,131 @@ async def queue_processor() -> None:
             for t in batch:
                 trades_store.append(t)
             if clients:
-                payload = json.dumps([serialize(t) for t in batch])
-                await broadcast(payload)
+                await broadcast(json.dumps([serialize(t) for t in batch]))
 
-        await asyncio.sleep(0.02)   # 50 Hz
+        # ── news ──────────────────────────────────────────────────────────────
+        news_batch = []
+        try:
+            while len(news_batch) < 20:
+                news_batch.append(news_queue.get_nowait())
+        except Empty:
+            pass
+        for item in news_batch:
+            if clients:
+                await broadcast(json.dumps(item))
+
+        await asyncio.sleep(0.02)
 
 
-# ── Lifecycle ────────────────────────────────────────────────────────────────
+# ── REST: full-day 1-min bars for a symbol ────────────────────────────────────
+@app.get("/bars/{sym}")
+async def get_bars(sym: str) -> JSONResponse:
+    try:
+        hclient   = StockHistoricalDataClient(API_KEY, SECRET_KEY)
+        now_et    = datetime.now(ET)
+        # Start from 4 AM ET (pre-market open) today
+        start_et  = now_et.replace(hour=4, minute=0, second=0, microsecond=0)
+        start_utc = start_et.astimezone(timezone.utc)
+
+        req  = StockBarsRequest(symbol_or_symbols=sym,
+                                timeframe=TimeFrame.Minute,
+                                start=start_utc)
+        resp = hclient.get_stock_bars(req)
+
+        bar_map: dict[int, dict] = {}
+        try:
+            sym_bars = resp[sym]
+        except (KeyError, TypeError):
+            sym_bars = []
+
+        for bar in sym_bars:
+            ts_ms = int(bar.timestamp.timestamp() * 1000)
+            bar_map[ts_ms] = {
+                "t": ts_ms,
+                "o": float(bar.open),
+                "h": float(bar.high),
+                "l": float(bar.low),
+                "c": float(bar.close),
+                "v": int(bar.volume),
+            }
+
+        # Merge with live bars (live wins for the current / recent minute)
+        for ts_ms, lb in minute_bars.get(sym, {}).items():
+            bar_map[ts_ms] = lb
+
+        merged = sorted(bar_map.values(), key=lambda b: b["t"])
+        return JSONResponse({"sym": sym, "bars": merged})
+    except Exception as exc:
+        return JSONResponse({"sym": sym, "bars": [], "error": str(exc)})
+
+
+# ── REST: 7-day news for a symbol ─────────────────────────────────────────────
+@app.get("/news/{sym}")
+async def get_news_route(sym: str) -> JSONResponse:
+    try:
+        nclient = NewsClient(API_KEY, SECRET_KEY)
+        start   = (datetime.now(timezone.utc) - timedelta(days=7)
+                   ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        req     = NewsRequest(symbols=sym, start=start, limit=50)
+        resp    = nclient.get_news(req)
+
+        articles = [article_to_dict(a) for a in (resp.news or [])]
+
+        # Merge with live-streamed news cached on the backend
+        seen = {a["id"] for a in articles}
+        for ln in news_store.get(sym, []):
+            if ln["id"] not in seen:
+                articles.append(ln)
+                seen.add(ln["id"])
+
+        articles.sort(key=lambda a: a["created_at"], reverse=True)
+        return JSONResponse({"sym": sym, "articles": articles[:100]})
+    except Exception as exc:
+        return JSONResponse({"sym": sym, "articles": [], "error": str(exc)})
+
+
+# ── Lifecycle ─────────────────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup() -> None:
-    threading.Thread(target=run_stream, daemon=True).start()
     asyncio.create_task(queue_processor())
+    threading.Thread(target=run_trade_stream, daemon=True).start()
+    threading.Thread(target=run_news_stream,  daemon=True).start()
 
 
-# ── Routes ───────────────────────────────────────────────────────────────────
+# ── Serve frontend ────────────────────────────────────────────────────────────
 @app.get("/")
 async def root() -> HTMLResponse:
     html = Path("static/index.html").read_text(encoding="utf-8")
     return HTMLResponse(html)
 
 
-@app.get("/api/trades")
-async def api_trades():
-    return recent_trades()
-
-
 @app.get("/api/stats")
 async def api_stats():
     trades = recent_trades()
-    symbols = {t["symbol"] for t in trades}
     return {
-        "trade_count":    len(trades),
-        "symbol_count":   len(symbols),
-        "window_minutes": MAX_AGE_SECONDS // 60,
-        "queue_size":     trade_queue.qsize(),
-        "clients":        len(clients),
+        "trade_count":  len(trades),
+        "symbol_count": len({t["symbol"] for t in trades}),
+        "queue_size":   trade_queue.qsize(),
+        "clients":      len(clients),
+        "bar_syms":     len(minute_bars),
+        "news_syms":    len(news_store),
     }
 
 
+# ── WebSocket ─────────────────────────────────────────────────────────────────
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     clients.add(ws)
     try:
-        # Send up to 2 000 recent trades as init payload
-        init = recent_trades()[-2000:]
-        await ws.send_text(json.dumps({"type": "init", "data": init}))
-        # Keep-alive loop
+        await ws.send_text(json.dumps({"type": "init", "data": recent_trades()}))
         while True:
             try:
                 await asyncio.wait_for(ws.receive_text(), timeout=25)
             except asyncio.TimeoutError:
                 await ws.send_text('{"type":"ping"}')
     except (WebSocketDisconnect, Exception):
+        pass
+    finally:
         clients.discard(ws)
