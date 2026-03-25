@@ -240,6 +240,40 @@
     .news-time   { font-size: 9px; color: var(--dim);  font-family: 'Courier New', monospace; }
     .news-syms   { font-size: 9px; color: var(--purple); font-family: 'Courier New', monospace; }
     .news-empty, .news-loading { padding: 16px 12px; font-size: 11px; color: var(--dim); font-style: italic; text-align: center; }
+
+    /* Twitter / X sentiment card */
+    .news-item.news-twitter {
+      border-left: 2px solid #1d9bf0;
+      background: rgba(29,155,240,.05);
+      animation: flash-news .9s ease-out;
+    }
+    .twitter-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 9px; font-weight: 700; color: #1d9bf0;
+      text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px;
+    }
+    .twitter-summary {
+      font-size: 11.5px; color: var(--text); line-height: 1.5; margin-bottom: 5px;
+    }
+    .twitter-tweets { margin-top: 4px; }
+    .twitter-tweet {
+      padding: 4px 0; border-top: 1px solid rgba(29,155,240,.12);
+      font-size: 10px; color: var(--dim); line-height: 1.4;
+    }
+    .twitter-tweet a { color: #1d9bf0; text-decoration: none; font-size: 9px; }
+    .twitter-tweet a:hover { text-decoration: underline; }
+    .twitter-handle { font-weight: 700; color: #1d9bf0; font-family: 'Courier New', monospace; }
+    .twitter-loading {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; font-size: 10px; color: #1d9bf0;
+      border-left: 2px solid #1d9bf0; background: rgba(29,155,240,.04);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .twitter-spinner {
+      width: 10px; height: 10px; border: 2px solid rgba(29,155,240,.3);
+      border-top-color: #1d9bf0; border-radius: 50%;
+      animation: spin .8s linear infinite; flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -416,6 +450,7 @@ const allSyms      = new Set();
 const alertHistory = new Map();   // sym → {row, firstTs, lastTs}
 let   chartBars    = [];          // [{t,o,h,l,c,v}] minute bars for selected sym
 const newsCache    = {};          // sym → article[]
+const twitterCache = {};          // sym → {summary, tweets} — first-alert-only fetch
 
 let selectedSym = null;
 const rateWin   = [];
@@ -522,10 +557,14 @@ function renderSummary(rows) {
     r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD
   );
 
-  // ── 2. Update alertHistory; auto-select on first new spike ────────────
+  // ── 2. Update alertHistory; first-time actions ────────────────────────
   for (const r of freshAlerts) {
     const existing = alertHistory.get(r.sym);
-    if (!existing && !selectedSym) selectSym(r.sym);   // auto-select first spike
+    if (!existing) {
+      // Very first alert for this ticker today
+      if (!selectedSym) selectSym(r.sym);    // auto-select if nothing pinned
+      loadTwitter(r.sym);                    // fetch X sentiment (once per ticker per session)
+    }
     alertHistory.set(r.sym, {
       row:     r,
       firstTs: existing ? existing.firstTs : now,
@@ -646,8 +685,8 @@ async function loadBarsAndNews(sym) {
   }
 
   // ── news ──────────────────────────────────────────────────────────────────
-  document.getElementById('newsSym').textContent    = sym;
-  document.getElementById('newsPanel').innerHTML    = '<div class="news-loading">Loading news…</div>';
+  document.getElementById('newsSym').textContent = sym;
+  document.getElementById('newsPanel').innerHTML = '<div class="news-loading">Loading news…</div>';
   try {
     const res  = await fetch(`/news/${sym}`);
     const data = await res.json();
@@ -656,6 +695,94 @@ async function loadBarsAndNews(sym) {
   } catch {
     document.getElementById('newsPanel').innerHTML = '<div class="news-empty">Failed to load news.</div>';
   }
+
+  // ── inject cached Twitter card if already fetched for this ticker ─────────
+  if (twitterCache[sym]) injectTwitterCard(sym, twitterCache[sym]);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TWITTER / X SENTIMENT  (first alert per ticker per session)
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadTwitter(sym) {
+  if (twitterCache[sym]) {
+    // Already fetched — just inject if this sym is visible
+    if (selectedSym === sym) injectTwitterCard(sym, twitterCache[sym]);
+    return;
+  }
+
+  // Show loading indicator in news panel if this ticker is selected
+  if (selectedSym === sym) showTwitterLoading(sym);
+
+  try {
+    const res  = await fetch(`/twitter/${sym}`);
+    const data = await res.json();
+
+    if (data.error && !data.summary) {
+      console.warn(`Twitter fetch error for ${sym}:`, data.error);
+      removeTwitterLoading();
+      return;
+    }
+
+    twitterCache[sym] = data;
+
+    // Only render if this ticker is still selected when response arrives
+    if (selectedSym === sym) injectTwitterCard(sym, data);
+  } catch (e) {
+    console.warn('Twitter fetch failed:', e);
+    removeTwitterLoading();
+  }
+}
+
+function showTwitterLoading(sym) {
+  const panel = document.getElementById('newsPanel');
+  // Only add if panel is already showing news (not a placeholder)
+  const loading = document.createElement('div');
+  loading.id = 'twitterLoading';
+  loading.className = 'twitter-loading';
+  loading.innerHTML = '<div class="twitter-spinner"></div>Fetching X sentiment for $' + sym + '…';
+  panel.insertBefore(loading, panel.firstChild);
+}
+
+function removeTwitterLoading() {
+  const el = document.getElementById('twitterLoading');
+  if (el) el.remove();
+}
+
+function injectTwitterCard(sym, data) {
+  removeTwitterLoading();
+  const panel = document.getElementById('newsPanel');
+
+  // Remove any existing Twitter card for this sym
+  const old = document.getElementById('twitterCard');
+  if (old) old.remove();
+
+  if (!data.summary && (!data.tweets || !data.tweets.length)) return;
+
+  const card = document.createElement('div');
+  card.id        = 'twitterCard';
+  card.className = 'news-item news-twitter';
+
+  // Build tweet list HTML
+  const tweetsHtml = (data.tweets || []).slice(0, 5).map(t => `
+    <div class="twitter-tweet">
+      <span class="twitter-handle">${t.user}</span>
+      ${t.content ? ' · ' + t.content.slice(0, 120) + (t.content.length > 120 ? '…' : '') : ''}
+      ${t.link ? ` <a href="${t.link}" target="_blank" rel="noopener">↗</a>` : ''}
+    </div>`).join('');
+
+  const age = data.fetched_at
+    ? Math.floor((Date.now() - new Date(data.fetched_at).getTime()) / 60_000) + 'm ago'
+    : 'just now';
+
+  card.innerHTML =
+    `<div class="twitter-badge">🐦 X / Twitter · ${data.cached ? 'cached' : 'live'} · ${age}</div>` +
+    `<div class="twitter-summary">${data.summary}</div>` +
+    (tweetsHtml ? `<div class="twitter-tweets">${tweetsHtml}</div>` : '');
+
+  // Always insert at top of news panel
+  const placeholder = panel.querySelector('.news-empty, .news-loading');
+  if (placeholder) panel.insertBefore(card, placeholder);
+  else             panel.insertBefore(card, panel.firstChild);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

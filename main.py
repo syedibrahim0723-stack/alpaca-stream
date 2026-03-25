@@ -9,6 +9,7 @@ Alpaca Live Trade Stream — FastAPI backend
 import asyncio
 import json
 import os
+import re
 import threading
 from collections import deque
 from datetime import datetime, timedelta, timezone
@@ -16,6 +17,7 @@ from pathlib import Path
 from queue import Empty, Queue
 
 import pytz
+import requests as req_lib
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -45,15 +47,22 @@ if not API_KEY or not SECRET_KEY:
 ET = pytz.timezone("America/New_York")
 BAD_CONDITIONS = {"U", "W", "Z"}   # keep T (extended hours) and V (contingent)
 
+# ── xAI / Grok config ─────────────────────────────────────────────────────────
+XAI_KEY   = os.getenv("XAI_API_KEY", "")
+XAI_URL   = "https://api.x.ai/v1/responses"
+XAI_HDR   = {"Content-Type": "application/json", "Authorization": f"Bearer {XAI_KEY}"}
+XAI_MODEL = "grok-4-fast-non-reasoning"
+
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(title="Alpaca Trade Stream")
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
 
 # ── In-memory stores ──────────────────────────────────────────────────────────
-trades_store: deque            = deque(maxlen=200_000)
-minute_bars:  dict[str, dict]  = {}   # sym → {min_ts_ms: {t,o,h,l,c,v}}
-news_store:   dict[str, list]  = {}   # sym → [article, ...] most-recent-first
+trades_store:    deque           = deque(maxlen=200_000)
+minute_bars:     dict[str, dict] = {}   # sym → {min_ts_ms: {t,o,h,l,c,v}}
+news_store:      dict[str, list] = {}   # sym → [article, ...] most-recent-first
+twitter_cache:   dict[str, dict] = {}   # sym → {summary, tweets, raw, fetched_at}  — resets on restart
 
 # ── Queues ────────────────────────────────────────────────────────────────────
 trade_queue: Queue = Queue(maxsize=100_000)
@@ -219,6 +228,123 @@ async def queue_processor() -> None:
                 await broadcast(json.dumps(item))
 
         await asyncio.sleep(0.02)
+
+
+# ── xAI / Grok helpers (sync — called via asyncio.to_thread) ─────────────────
+def _xai_post(payload: dict, timeout: int = 45) -> str:
+    """POST to xAI Responses API and return the concatenated output_text."""
+    r = req_lib.post(XAI_URL, headers=XAI_HDR, json=payload, timeout=timeout)
+    r.raise_for_status()
+    text = ""
+    for item in r.json().get("output", []):
+        if item.get("type") == "message":
+            for block in item.get("content", []):
+                if block.get("type") == "output_text":
+                    text += block.get("text", "")
+    return text.strip()
+
+
+def _search_tweets(sym: str) -> str:
+    """Fetch 5 most recent X posts about $SYM from the last 24 h."""
+    return _xai_post({
+        "model": XAI_MODEL,
+        "stream": False,
+        "temperature": 0,
+        "tools": [{"type": "x_search"}],
+        "input": [
+            {
+                "role": "system",
+                "content": (
+                    "You have real-time access to X via x_search. "
+                    "Always use the tool. Never fabricate posts. "
+                    "Format each post exactly as:\n"
+                    "### [n]\n"
+                    "**User**: @handle\n"
+                    "**Content**: full tweet text\n"
+                    "**Time**: timestamp\n"
+                    "**Link**: url"
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Search X for the 5 most recent trading-relevant posts about ${sym} "
+                    f"from the last 24 hours. Include posts about price moves, catalysts, "
+                    f"earnings, news, or notable analyst comments."
+                ),
+            },
+        ],
+    }, timeout=50)
+
+
+def _summarize_tweets(sym: str, raw: str) -> str:
+    """Summarize tweet raw text into a 2-3 sentence trading insight."""
+    return _xai_post({
+        "model": XAI_MODEL,
+        "stream": False,
+        "temperature": 0,
+        "tools": [],
+        "input": [
+            {
+                "role": "system",
+                "content": "You are a concise trading assistant. Be factual, brief, and specific.",
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Recent X posts about ${sym}:\n\n{raw}\n\n"
+                    f"In 2-3 sentences summarise: what traders are discussing, "
+                    f"the overall sentiment (bullish / bearish / mixed), "
+                    f"and any specific catalysts or price targets mentioned."
+                ),
+            },
+        ],
+    }, timeout=25)
+
+
+def _parse_tweets(raw: str, sym: str) -> list[dict]:
+    """Parse ### blocks from xAI response into tweet dicts."""
+    tweets = []
+    blocks = re.split(r'\n(?=###)', raw.strip())
+    for block in blocks:
+        if not block.strip().startswith('###'):
+            continue
+        def field(name):
+            m = re.search(rf'\*\*{name}:?\*\*:?\s*(.+?)(?=\n\s*\*\*|\Z)', block,
+                          re.DOTALL | re.IGNORECASE)
+            return m.group(1).strip() if m else ""
+        u = re.search(r'\*\*User(?:name)?:?\*\*:?\s*(@[\w]+)', block)
+        tweets.append({
+            "user":    u.group(1) if u else f"${sym}",
+            "content": field("Content"),
+            "time":    field("Time"),
+            "link":    field("Link"),
+        })
+    return [t for t in tweets if t["content"]]
+
+
+# ── REST: X / Twitter sentiment for a symbol (first alert only) ───────────────
+@app.get("/twitter/{sym}")
+async def get_twitter(sym: str) -> JSONResponse:
+    # Return cached result if already fetched today
+    if sym in twitter_cache:
+        return JSONResponse({"sym": sym, "cached": True, **twitter_cache[sym]})
+    try:
+        raw     = await asyncio.to_thread(_search_tweets, sym)
+        summary = await asyncio.to_thread(_summarize_tweets, sym, raw) if raw else "No recent posts found."
+        tweets  = _parse_tweets(raw, sym)
+        data    = {
+            "summary":    summary,
+            "tweets":     tweets,
+            "raw":        raw,
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+        }
+        twitter_cache[sym] = data
+        return JSONResponse({"sym": sym, "cached": False, **data})
+    except Exception as exc:
+        # Don't cache on error — allow retry
+        return JSONResponse({"sym": sym, "summary": "", "tweets": [], "raw": "",
+                             "error": str(exc)})
 
 
 # ── REST: full-day 1-min bars for a symbol ────────────────────────────────────
