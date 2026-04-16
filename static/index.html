@@ -274,15 +274,317 @@
       border-top-color: #1d9bf0; border-radius: 50%;
       animation: spin .8s linear infinite; flex-shrink: 0;
     }
+
+    /* ── Summary / History tabs ──────────────────────────────────────────── */
+    .tab-bar {
+      display: flex; flex-shrink: 0;
+      border-bottom: 1px solid var(--border); background: var(--card);
+    }
+    .tab-btn {
+      flex: 1; padding: 5px 0; background: none; border: none;
+      border-bottom: 2px solid transparent; color: var(--dim);
+      font-size: 9.5px; font-weight: 700; letter-spacing: .8px;
+      text-transform: uppercase; cursor: pointer; transition: all .15s;
+    }
+    .tab-btn:hover  { color: var(--text); }
+    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .tab-pane { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    .tab-pane.hidden { display: none; }
+
+    /* History table */
+    .hist-wrap { overflow-y: auto; flex: 1; }
+    .hist-wrap::-webkit-scrollbar { width: 3px; }
+    .hist-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+    #histTable tbody tr { cursor: default; }
+    #histTable td { font-family: 'Courier New', monospace; font-size: 10.5px; padding: 3px 9px; white-space: nowrap; }
+    #histTable td.ht-sym  { color: var(--blue); font-weight: 700; }
+    #histTable td.ht-bull { color: var(--green); font-weight: 700; }
+    #histTable td.ht-bear { color: var(--red);   font-weight: 700; }
+    #histTable td.ht-tag  { font-size: 8px; color: var(--dim); }
+    #histTable td.r       { text-align: right; }
+    .hist-empty { padding: 14px 12px; font-size: 11px; color: var(--dim); font-style: italic; }
+    .hist-footer { padding: 4px 10px; font-size: 9px; color: var(--dim); border-top: 1px solid var(--border); flex-shrink: 0; }
+
+    /* Volume spike table */
+    .vol-wrap { overflow-y: auto; flex: 1; }
+    .vol-wrap::-webkit-scrollbar { width: 3px; }
+    .vol-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+    #volTable td { font-family: 'Courier New', monospace; font-size: 10.5px; padding: 3px 9px; white-space: nowrap; }
+    #volTable td.vol-sym  { color: var(--blue); font-weight: 700; cursor: pointer; }
+    #volTable td.vol-sym:hover { color: var(--text); }
+    #volTable td.vol-spike { color: var(--orange); font-weight: 700; }
+    #volTable td.r { text-align: right; }
+    .vol-footer { padding: 4px 10px; font-size: 9px; color: var(--dim); border-top: 1px solid var(--border); flex-shrink: 0; }
+
+    /* ── Vol spike tier containers ───────────────────────────────────────── */
+    .vol-pane-inner { overflow-y: auto; flex: 1; padding: 6px 8px 6px; display: flex; flex-direction: column; gap: 8px; }
+    .vol-pane-inner::-webkit-scrollbar { width: 3px; }
+    .vol-pane-inner::-webkit-scrollbar-thumb { background: var(--border); }
+    .vol-empty-msg { padding: 20px 12px; font-size: 11px; color: var(--dim); font-style: italic; text-align: center; }
+    .tier-container { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--card); }
+    .tier-hdr {
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 10px; background: rgba(255,255,255,.04);
+      border-bottom: 1px solid var(--border);
+    }
+    .tier-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c, #888); flex-shrink: 0; }
+    .tier-name { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--text); }
+    .tier-cnt  { font-size: 9px; background: rgba(255,255,255,.1); color: var(--dim); padding: 1px 6px; border-radius: 9px; margin-left: 2px; }
+    .tier-cap-range { font-size: 9px; color: var(--dim); margin-left: auto; }
+    .vol-tbl { width: 100%; border-collapse: collapse; }
+    .vol-tbl th { font-size: 8.5px; font-weight: 700; color: var(--dim); letter-spacing: .06em; padding: 3px 9px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    .vol-tbl td { font-family: 'Courier New', monospace; font-size: 10.5px; padding: 3px 9px; white-space: nowrap; }
+    .vol-tbl td.vol-sym  { color: var(--blue); font-weight: 700; cursor: pointer; }
+    .vol-tbl td.vol-sym:hover { color: var(--text); }
+    .vol-tbl td.vol-spike { color: var(--orange); font-weight: 700; }
+    .vol-tbl td.r { text-align: right; }
+    .vol-tbl tbody tr:hover { background: rgba(255,255,255,.03); }
+
+    /* ── Settings pane ───────────────────────────────────────────────────── */
+    .settings-wrap { overflow-y: auto; flex: 1; padding: 10px; }
+    .settings-wrap::-webkit-scrollbar { width: 3px; }
+    .settings-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+    .settings-section-title { font-size: 9px; font-weight: 700; letter-spacing: .1em; color: var(--dim); margin-bottom: 8px; text-transform: uppercase; }
+    .settings-tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .settings-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--card); display: flex; flex-direction: column; gap: 5px; }
+    .settings-card-hdr { font-size: 10px; font-weight: 700; color: var(--tc, var(--text)); padding-bottom: 5px; border-bottom: 1px solid var(--border); margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center; }
+    .settings-card-range { font-size: 8.5px; color: var(--dim); font-weight: 400; }
+    .settings-card label { display: flex; align-items: center; justify-content: space-between; font-size: 9.5px; color: var(--dim); gap: 6px; }
+    .set-in { width: 54px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-size: 10px; padding: 2px 5px; text-align: right; }
+    .set-in:focus { outline: none; border-color: var(--blue); }
+    .settings-actions { display: flex; gap: 8px; margin-top: 2px; }
+    .settings-save-btn  { flex: 1; padding: 5px 0; background: var(--blue); border: none; border-radius: 4px; color: #fff; font-size: 10px; font-weight: 700; cursor: pointer; letter-spacing: .05em; }
+    .settings-save-btn:hover  { opacity: .85; }
+    .settings-reset-btn { padding: 5px 12px; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--dim); font-size: 10px; cursor: pointer; }
+    .settings-reset-btn:hover { color: var(--text); border-color: var(--dim); }
+    .settings-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0 8px; }
+
+    /* ── Flash row — vol1m ≥ FLASH_THRESHOLD ─────────────────────────────── */
+    @keyframes flash-row { 0%{background:rgba(255,220,50,.22)} 60%{background:rgba(255,220,50,.08)} 100%{background:transparent} }
+    .vol-tbl tr.flash-row { animation: flash-row 1.4s ease-out forwards; }
+    .vol-tbl tr.flash-row td.vol-sym { color: #ffd700 !important; }
+    /* Flash for alert rows (bull/bear panels) */
+    .alert-row.flash-alert { animation: flash-row 1.4s ease-out forwards; border-left-width: 3px !important; }
+    .alert-row.flash-alert .ar-sym { color: #ffd700 !important; }
+    .alert-row.flash-alert .ar-val { color: #ffd700 !important; font-weight: 700; }
+    .flash-bolt { font-size: 11px; vertical-align: middle; }
+
+    /* ── Settings modal overlay ──────────────────────────────────────────── */
+    #settingsOverlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(3px);
+      align-items: flex-start; justify-content: center; padding-top: 24px;
+    }
+    #settingsOverlay.open { display: flex; }
+    #settingsModal {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      width: min(960px, 96vw); max-height: 88vh; display: flex; flex-direction: column;
+      overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    }
+    #settingsModal .sm-hdr {
+      display: flex; align-items: center; padding: 12px 18px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    #settingsModal .sm-title { font-size: 13px; font-weight: 700; color: var(--text); flex: 1; }
+    #settingsModal .sm-close {
+      background: none; border: none; color: var(--dim); font-size: 18px;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;
+    }
+    #settingsModal .sm-close:hover { color: var(--text); background: rgba(255,255,255,.07); }
+    #settingsModal .sm-body { overflow-y: auto; padding: 16px 18px; flex: 1; }
+    #settingsModal .sm-body::-webkit-scrollbar { width: 4px; }
+    #settingsModal .sm-body::-webkit-scrollbar-thumb { background: var(--border); }
+    .sm-section { margin-bottom: 18px; }
+    .sm-section-title {
+      font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--dim); margin-bottom: 10px; padding-bottom: 5px;
+      border-bottom: 1px solid var(--border);
+    }
+    /* Tier grid: each tier is one column */
+    .sm-tier-grid {
+      display: grid;
+      grid-template-columns: 110px repeat(5, 1fr);
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      font-size: 10px;
+    }
+    .sm-tier-grid .sg-hdr {
+      background: rgba(255,255,255,.04);
+      padding: 5px 8px;
+      font-weight: 700;
+      font-size: 9px;
+      letter-spacing: .06em;
+      color: var(--dim);
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      text-align: center;
+    }
+    .sm-tier-grid .sg-hdr:last-child { border-right: none; }
+    .sm-tier-grid .sg-hdr.tier-hdr-nano  { color: #e86060; }
+    .sm-tier-grid .sg-hdr.tier-hdr-small { color: #e8a060; }
+    .sm-tier-grid .sg-hdr.tier-hdr-mid   { color: #60a0e8; }
+    .sm-tier-grid .sg-hdr.tier-hdr-big   { color: #a060e8; }
+    .sm-tier-grid .sg-hdr.tier-hdr-other { color: #888; }
+    .sm-tier-grid .sg-row-lbl {
+      background: rgba(255,255,255,.02);
+      padding: 5px 8px;
+      font-size: 9px;
+      color: var(--dim);
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      display: flex; align-items: center;
+      white-space: nowrap;
+    }
+    .sm-tier-grid .sg-row-lbl:last-of-type { border-bottom: none; }
+    .sm-tier-grid .sg-cell {
+      padding: 4px 5px;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      display: flex; align-items: center; gap: 2px;
+    }
+    .sm-tier-grid .sg-cell:last-child { border-right: none; }
+    .sm-tier-grid .sg-cell input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-size: 10px;
+      padding: 2px 4px;
+      text-align: right;
+      min-width: 0;
+    }
+    .sm-tier-grid .sg-cell input:focus { outline: none; border-color: var(--blue); }
+    .sm-tier-grid .sg-cell .sg-unit { font-size: 8.5px; color: var(--dim); flex-shrink: 0; }
+    .sm-tier-grid .sg-group-lbl {
+      grid-column: 1 / -1;
+      background: rgba(255,255,255,.03);
+      padding: 4px 8px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      color: var(--dim);
+      border-bottom: 1px solid var(--border);
+      border-top: 1px solid var(--border);
+    }
+    /* Suppressed list */
+    .supp-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+    .supp-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: var(--card2); border-radius: 4px; border: 1px solid var(--border); }
+    .supp-sym  { font-weight: 700; color: var(--blue); font-size: 11px; min-width: 50px; }
+    .supp-exp  { font-size: 9px; color: var(--dim); flex: 1; }
+    .supp-del  { background: none; border: 1px solid rgba(248,81,73,.4); color: var(--red); border-radius: 3px; font-size: 9px; padding: 2px 7px; cursor: pointer; flex-shrink: 0; }
+    .supp-del:hover { background: rgba(248,81,73,.12); }
+    .supp-add-row { display: flex; gap: 6px; align-items: center; }
+    .supp-add-row input { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-size: 11px; padding: 3px 7px; width: 80px; text-transform: uppercase; }
+    .supp-add-row select { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-size: 10px; padding: 3px 5px; }
+    .supp-add-row button { background: var(--blue); border: none; border-radius: 3px; color: #fff; font-size: 10px; padding: 4px 10px; cursor: pointer; font-weight: 700; }
+    .sm-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .sm-save-btn  { flex: 1; padding: 7px 0; background: var(--blue); border: none; border-radius: 5px; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .sm-save-btn:hover { opacity: .85; }
+    .sm-reset-btn { padding: 7px 14px; background: none; border: 1px solid var(--border); border-radius: 5px; color: var(--dim); font-size: 10px; cursor: pointer; }
+    .sm-reset-btn:hover { color: var(--text); border-color: var(--dim); }
   </style>
 </head>
 <body>
+<!-- ── Settings Modal ────────────────────────────────────────────────────── -->
+<div id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div id="settingsModal">
+    <div class="sm-hdr">
+      <span class="sm-title">⚙️ Settings</span>
+      <button class="sm-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="sm-body">
+
+      <!-- CAP TIER BOUNDARIES -->
+      <div class="sm-section">
+        <div class="sm-section-title">📐 Cap Tier Boundaries (upper limit — in $M)</div>
+        <div style="font-size:9px;color:var(--dim);margin-bottom:8px">Nano &lt; Small &lt; Mid &lt; Big. Symbols above Big go to Other.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)">
+            🔴 Nano &lt; <input class="set-in" id="smNanoMaxM"  type="number" min="1" step="10" style="width:64px">M
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)">
+            🟠 Small &lt; <input class="set-in" id="smSmallMaxM" type="number" min="1" step="50" style="width:64px">M
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)">
+            🔵 Mid &lt; <input class="set-in" id="smMidMaxM"   type="number" min="1" step="100" style="width:70px">M
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)">
+            🟣 Big &lt; <input class="set-in" id="smBigMaxM"   type="number" min="1" step="1000" style="width:70px">M
+          </label>
+        </div>
+      </div>
+
+      <!-- BULL CONDITIONS GRID -->
+      <div class="sm-section">
+        <div class="sm-section-title">🔥 Bull Spike Conditions (per tier)</div>
+        <div class="sm-tier-grid" id="bullGrid">
+          <div class="sg-hdr">Setting</div>
+          <div class="sg-hdr tier-hdr-nano">Nano</div>
+          <div class="sg-hdr tier-hdr-small">Small</div>
+          <div class="sg-hdr tier-hdr-mid">Mid</div>
+          <div class="sg-hdr tier-hdr-big">Big</div>
+          <div class="sg-hdr tier-hdr-other">Other</div>
+          <!-- rows injected by buildSettingsGrid('bull') -->
+        </div>
+      </div>
+
+      <!-- BEAR CONDITIONS GRID -->
+      <div class="sm-section">
+        <div class="sm-section-title">🔻 Bear Spike Conditions (per tier)</div>
+        <div class="sm-tier-grid" id="bearGrid">
+          <div class="sg-hdr">Setting</div>
+          <div class="sg-hdr tier-hdr-nano">Nano</div>
+          <div class="sg-hdr tier-hdr-small">Small</div>
+          <div class="sg-hdr tier-hdr-mid">Mid</div>
+          <div class="sg-hdr tier-hdr-big">Big</div>
+          <div class="sg-hdr tier-hdr-other">Other</div>
+        </div>
+      </div>
+
+      <!-- VOL SPIKE CONDITIONS GRID -->
+      <div class="sm-section">
+        <div class="sm-section-title">⚡ Volume Spike Conditions (per tier)</div>
+        <div class="sm-tier-grid" id="volGrid">
+          <div class="sg-hdr">Setting</div>
+          <div class="sg-hdr tier-hdr-nano">Nano</div>
+          <div class="sg-hdr tier-hdr-small">Small</div>
+          <div class="sg-hdr tier-hdr-mid">Mid</div>
+          <div class="sg-hdr tier-hdr-big">Big</div>
+          <div class="sg-hdr tier-hdr-other">Other</div>
+        </div>
+      </div>
+
+      <!-- SUPPRESSED STOCKS -->
+      <div class="sm-section">
+        <div class="sm-section-title">🚫 Suppressed Stocks</div>
+        <div class="supp-list" id="suppList"><div style="font-size:10px;color:var(--dim);font-style:italic">Loading…</div></div>
+        <div class="supp-add-row">
+          <input id="suppSymInput" type="text" placeholder="TICKER" maxlength="6">
+          <select id="suppDurSel">
+            <option value="day">Today only</option>
+            <option value="forever" selected>Forever</option>
+          </select>
+          <button onclick="addSuppressed()">+ Suppress</button>
+        </div>
+      </div>
+
+      <div class="sm-actions">
+        <button class="sm-save-btn"  onclick="saveSettings()">✓ Save &amp; Apply</button>
+        <button class="sm-reset-btn" onclick="resetSettings()">↺ Reset Defaults</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- Header -->
   <header>
-    <div class="logo">⚡ Alpaca <span>Live Stream</span> <sup>PAPER</sup></div>
-    <div class="filter-badge">TICKER ≤ 4 CHARS</div>
+    <div class="logo">⚡ <span>Live Trading</span></div>
+    <button id="settingsBtn" onclick="openSettings()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--dim);border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;letter-spacing:.03em" title="Settings">⚙️ Settings</button>
     <div id="status" class="connecting">● CONNECTING</div>
   </header>
 
@@ -296,18 +598,6 @@
 
   <!-- Controls bar -->
   <div class="controls-bar">
-    <div class="ctrl-group">
-      <span class="ctrl-tag">Δ% ≥</span>
-      <input class="ctrl-input" type="number" id="ctrlDelta" value="5" min="1" max="99" step="0.5">
-      <span class="ctrl-unit">%</span>
-    </div>
-    <div class="ctrl-sep"></div>
-    <div class="ctrl-group">
-      <span class="ctrl-tag">$ Val ≥</span>
-      <input class="ctrl-input" type="number" id="ctrlVal" value="100" min="1" step="10">
-      <span class="ctrl-unit">K</span>
-    </div>
-    <div class="ctrl-sep"></div>
     <button class="voice-btn on" id="voiceBtn">🔊 Voice ON</button>
     <button class="test-btn"     id="testBtn">Test Voice</button>
     <div class="ctrl-group">
@@ -347,27 +637,130 @@
         </div>
       </div>
 
-      <!-- Ticker summary (filtered to >= value threshold) -->
+      <!-- Ticker summary / alert history (tabbed) -->
       <div class="summary-section">
-        <div class="panel-hdr">
-          <div class="dot-live"></div>Ticker Summary
-          <span style="margin-left:auto;font-size:9px;color:var(--dim)">≥ $ threshold · sorted by |Δ%|</span>
+        <div class="tab-bar">
+          <button id="tabVol"  class="tab-btn active" onclick="switchTab('vol')">⚡ VOL SPIKES</button>
+          <button id="tabHist" class="tab-btn"        onclick="switchTab('hist')">📋 HISTORY</button>
         </div>
-        <div class="sum-wrap">
-          <table id="sumTable">
-            <thead><tr>
-              <th>Sym</th>
-              <th class="r">$ Val 1m</th>
-              <th class="r">VWAP 1m</th>
-              <th class="r">VWAP 2m*</th>
-              <th class="r">Δ%</th>
-              <th class="r">#Trades</th>
-            </tr></thead>
-            <tbody id="sumBody"></tbody>
-          </table>
+
+        <!-- Live summary pane — hidden from tabs; kept for background alert logic -->
+        <div id="paneSum" style="display:none">
+          <table id="sumTable"><tbody id="sumBody"></tbody></table>
         </div>
-        <div style="padding:4px 10px;font-size:9px;color:var(--dim);border-top:1px solid var(--border);">
-          * VWAP 2m = prior 60–120s · alerts: Δ% + &gt;$val + ≥5 trades · persists 5 min
+
+        <!-- Volume spike pane — tier containers -->
+        <div id="paneVol" class="tab-pane">
+          <div class="vol-pane-inner">
+
+            <!-- NANO CAP container -->
+            <div class="tier-container" id="tcNano" style="display:none">
+              <div class="tier-hdr">
+                <span class="tier-dot" style="--c:#e86060"></span>
+                <span class="tier-name">NANO CAP</span>
+                <span class="tier-cnt" id="tcNanoCnt">0</span>
+                <span class="tier-cap-range" id="tcNanoRange">under $50M</span>
+              </div>
+              <table class="vol-tbl"><thead><tr>
+                <th>Sym</th><th class="r">$ Vol 1m</th><th class="r">Baseline/m</th>
+                <th class="r">Spike</th><th class="r">Price</th><th class="r">Trades</th>
+              </tr></thead><tbody id="volBodyNano"></tbody></table>
+            </div>
+
+            <!-- SMALL CAP container -->
+            <div class="tier-container" id="tcSmall" style="display:none">
+              <div class="tier-hdr">
+                <span class="tier-dot" style="--c:#e8a060"></span>
+                <span class="tier-name">SMALL CAP</span>
+                <span class="tier-cnt" id="tcSmallCnt">0</span>
+                <span class="tier-cap-range" id="tcSmallRange">$50M – $300M</span>
+              </div>
+              <table class="vol-tbl"><thead><tr>
+                <th>Sym</th><th class="r">$ Vol 1m</th><th class="r">Baseline/m</th>
+                <th class="r">Spike</th><th class="r">Price</th><th class="r">Trades</th>
+              </tr></thead><tbody id="volBodySmall"></tbody></table>
+            </div>
+
+            <!-- MID CAP container -->
+            <div class="tier-container" id="tcMid" style="display:none">
+              <div class="tier-hdr">
+                <span class="tier-dot" style="--c:#60a0e8"></span>
+                <span class="tier-name">MID CAP</span>
+                <span class="tier-cnt" id="tcMidCnt">0</span>
+                <span class="tier-cap-range" id="tcMidRange">$300M – $2B</span>
+              </div>
+              <table class="vol-tbl"><thead><tr>
+                <th>Sym</th><th class="r">$ Vol 1m</th><th class="r">Baseline/m</th>
+                <th class="r">Spike</th><th class="r">Price</th><th class="r">Trades</th>
+              </tr></thead><tbody id="volBodyMid"></tbody></table>
+            </div>
+
+            <!-- BIG CAP container -->
+            <div class="tier-container" id="tcBig" style="display:none">
+              <div class="tier-hdr">
+                <span class="tier-dot" style="--c:#a060e8"></span>
+                <span class="tier-name">BIG CAP</span>
+                <span class="tier-cnt" id="tcBigCnt">0</span>
+                <span class="tier-cap-range" id="tcBigRange">$2B – $100B</span>
+              </div>
+              <table class="vol-tbl"><thead><tr>
+                <th>Sym</th><th class="r">$ Vol 1m</th><th class="r">Baseline/m</th>
+                <th class="r">Spike</th><th class="r">Price</th><th class="r">Trades</th>
+              </tr></thead><tbody id="volBodyBig"></tbody></table>
+            </div>
+
+            <!-- OTHER / UNKNOWN CAP container -->
+            <div class="tier-container" id="tcOther" style="display:none">
+              <div class="tier-hdr">
+                <span class="tier-dot" style="--c:#888"></span>
+                <span class="tier-name">OTHER</span>
+                <span class="tier-cnt" id="tcOtherCnt">0</span>
+                <span class="tier-cap-range">no market cap data</span>
+              </div>
+              <table class="vol-tbl"><thead><tr>
+                <th>Sym</th><th class="r">$ Vol 1m</th><th class="r">Baseline/m</th>
+                <th class="r">Spike</th><th class="r">Price</th><th class="r">Trades</th>
+              </tr></thead><tbody id="volBodyOther"></tbody></table>
+            </div>
+
+            <!-- NEW ACTIVITY container (no baseline) -->
+            <div class="tier-container" id="tcNewAct" style="display:none">
+              <div class="tier-hdr">
+                <span class="tier-dot" style="--c:#aaa"></span>
+                <span class="tier-name">🆕 NEW ACTIVITY</span>
+                <span class="tier-cnt" id="tcNewActCnt">0</span>
+                <span class="tier-cap-range">no prior baseline data</span>
+              </div>
+              <table class="vol-tbl"><thead><tr>
+                <th>Sym</th><th class="r">$ Vol 1m</th><th class="r">Baseline/m</th>
+                <th class="r">Spike</th><th class="r">Price</th><th class="r">Trades</th>
+              </tr></thead><tbody id="volBodyNewAct"></tbody></table>
+            </div>
+
+            <div id="volEmpty" class="vol-empty-msg" style="display:none">No volume spikes detected…</div>
+          </div>
+          <div class="vol-footer">⚡ 1m dollar vol vs avg prior 4m · tiered thresholds · latest activity first</div>
+        </div>
+
+        <!-- Alert history pane -->
+        <div id="paneHist" class="tab-pane hidden">
+          <div class="hist-wrap">
+            <table id="histTable">
+              <thead><tr>
+                <th>Time</th>
+                <th>Sym</th>
+                <th class="r">Dir</th>
+                <th class="r">Δ%</th>
+                <th class="r">$ Val</th>
+                <th class="r">Trades</th>
+                <th class="ht-tag">Tag</th>
+              </tr></thead>
+              <tbody id="histBody">
+                <tr><td colspan="7" class="hist-empty">Loading history…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="hist-footer" id="histFooter">—</div>
         </div>
       </div>
     </div>
@@ -392,7 +785,15 @@
         <div class="news-hdr">
           📰 News
           <span class="news-sym-badge" id="newsSym">—</span>
-          <span style="margin-left:auto;font-size:9px">7-day history · live stream</span>
+          <button id="fetchXBtn" onclick="onFetchXClick()"
+            style="margin-left:auto;display:flex;align-items:center;gap:5px;
+                   padding:3px 10px;border-radius:5px;border:1px solid rgba(29,155,240,.4);
+                   background:transparent;color:#1d9bf0;font-size:10px;font-weight:700;
+                   cursor:pointer;letter-spacing:.3px;transition:all .15s;"
+            title="Fetch X / Twitter sentiment for selected ticker">
+            🐦 Fetch X Posts
+          </button>
+          <span style="font-size:9px;color:var(--dim);margin-left:8px">7-day history · live stream</span>
         </div>
         <div class="news-scroll" id="newsPanel">
           <div class="news-empty">Select an alert ticker to load news…</div>
@@ -447,9 +848,12 @@ const chart = new Chart(chartCtx, {
 const symbolData   = new Map();   // sym → [{x,y,sz}]  5-min raw ticks
 const lastPrice    = new Map();   // sym → last price
 const allSyms      = new Set();
-const alertHistory = new Map();   // sym → {row, firstTs, lastTs}
+const alertHistory   = new Map();   // sym → {row, firstTs, lastTs}
+// Vol spike persistence — survives one refresh cycle (5-min TTL)
+// sym → {row, firstTs, lastTs}  mirrors alertHistory pattern
+const volSpikeCache  = new Map();
 let   chartBars    = [];          // [{t,o,h,l,c,v}] minute bars for selected sym
-const newsCache    = {};          // sym → article[]
+const newsCache    = {};          // sym → { articles: [], ts: number }
 const twitterCache = {};          // sym → {summary, tweets} — first-alert-only fetch
 
 let selectedSym = null;
@@ -458,21 +862,96 @@ const rateWin   = [];
 const WIN_5M = 5 * 60_000;
 const WIN_1M =     60_000;
 const WIN_2M = 2 * 60_000;
-let DELTA_THRESHOLD = 5;
-let VALUE_THRESHOLD = 100_000;
-let SPEAK_COOLDOWN  = 120_000;
-const ALERT_TTL     = 5 * 60_000;
+let SPEAK_COOLDOWN      = 120_000;
+const ALERT_TTL = 5 * 60_000;
+
+// ── Per-tier config with bull/bear/vol sub-configs + flash per section ────────
+// maxCapM: upper boundary in $M (0 = catch-all "other" tier)
+// bull/bear: { delta (%), valK ($K), trades, flashM ($M threshold for gold highlight) }
+// vol:       { spike (×), minVolK ($K), deltaP (%), flashM }
+const DEFAULT_TIER_CONFIG = {
+  nano:  { label:'Nano',  color:'#e86060', maxCapM:50,
+           bull:{ delta:4,  valK:20,   trades:1, flashM:0.05 },
+           bear:{ delta:6,  valK:20,   trades:2, flashM:0.05 },
+           vol: { spike:10, minVolK:10, deltaP:8, flashM:0.1  } },
+  small: { label:'Small', color:'#e8a060', maxCapM:300,
+           bull:{ delta:3,  valK:50,   trades:1, flashM:0.5  },
+           bear:{ delta:4,  valK:50,   trades:3, flashM:0.1  },
+           vol: { spike:8,  minVolK:40, deltaP:5, flashM:1.0  } },
+  mid:   { label:'Mid',   color:'#60a0e8', maxCapM:2000,
+           bull:{ delta:2,  valK:1000, trades:1, flashM:1.0  },
+           bear:{ delta:3,  valK:100,  trades:3, flashM:0.25 },
+           vol: { spike:5,  minVolK:100,deltaP:3, flashM:2.0  } },
+  big:   { label:'Big',   color:'#a060e8', maxCapM:100000,
+           bull:{ delta:1,  valK:2000, trades:1, flashM:0.5  },
+           bear:{ delta:2,  valK:1000, trades:5, flashM:0.5  },
+           vol: { spike:7,  minVolK:1000,deltaP:2,flashM:10.0 } },
+  other: { label:'Other', color:'#888888', maxCapM:0,
+           bull:{ delta:3,  valK:100,  trades:3, flashM:0.2  },
+           bear:{ delta:3,  valK:10,   trades:3, flashM:0.2  },
+           vol: { spike:10, minVolK:10, deltaP:3, flashM:1.0  } },
+};
+let tierConfig = (() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('tierConfig2'));
+    if (!saved) return JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG));
+    // Ensure all keys exist (migration safety)
+    for (const k of Object.keys(DEFAULT_TIER_CONFIG)) {
+      if (!saved[k]) saved[k] = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG[k]));
+    }
+    return saved;
+  } catch { return JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG)); }
+})();
+
+// Suppressed stocks — loaded from backend on startup
+// sym → { expires_at: string|null, reason: string }
+let suppressedSyms = new Map();
+
+// ── Universe metadata (loaded once at startup from /universe/meta) ─────────
+// sym → { market_cap, cap_tier, spike_thresh, min_vol, delta_pct, sector, name }
+let symMeta = {};
+
+// ── Yesterday's top-50 by dollar volume — shown with 🔥 badge ──────────────
+let yesterdayTop = new Set();
+
+let _chartDirty = false;   // set true when live bar mutated; flushed once per batch
+let totalTicks  = 0;       // running count of points across all symbolData arrays
+
+const NEWS_CACHE_TTL = 5 * 60_000;   // news cached for 5 min per symbol
+
+// Large-cap tickers excluded server-side too — this is a belt-and-suspenders guard
+const LARGE_CAP_EXCLUDE = new Set([
+  "AAPL","MSFT","NVDA","GOOGL","GOOG","AMZN","META","TSLA","AVGO","LLY",
+  "BRK.A","BRK.B","WMT","JPM","V","UNH","XOM","MA","ORCL","COST",
+  "HD","JNJ","PG","ABBV","MRK","CVX","AMD","NFLX","CRM","PEP",
+  "KO","ADBE","ACN","TMO","LIN","MCD","BAC","GE","WFC","CSCO",
+  "ABT","PM","NEE","TXN","DHR","IBM","QCOM","SPGI","RTX","LOW",
+  "HON","UNP","CAT","GS","AMGN","BKNG","INTU","ISRG","VRTX","SYK",
+  "AXP","BLK","T","VZ","CMCSA","C","USB","MMM","DE","ADP",
+  "SPY","QQQ","IWM","DIA","VOO","VTI","GLD","TLT","HYG","LQD",
+  "EEM","EFA","VXX","SQQQ","TQQQ","UVXY","IBIT","SLV","USO","GDX",
+  "XLF","XLE","XLK","XLV","XLU","XLP","XLRE","XLI","XLB","XLY","XLC",
+  "ARKK","ARKW","ARKF","ARKG","ARKQ",
+  "SDS","SPXU","SDOW","UDOW","SPXL","LABU","LABD","SOXL","SOXS",
+]);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════════════════════════════════════
 const cutoff5m = () => Date.now() - WIN_5M;
 
+// Escape HTML entities — prevents XSS when inserting untrusted text via innerHTML
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+// Only allow http/https URLs — blocks javascript: and data: injection
+function safeUrl(u) { return u && /^https?:\/\//i.test(u) ? u : '#'; }
+
 function cleanData() {
   const cut = cutoff5m();
   for (const [sym, pts] of symbolData) {
     let i = 0; while (i < pts.length && pts[i].x < cut) i++;
-    if (i) pts.splice(0, i);
+    if (i) { totalTicks -= i; pts.splice(0, i); }
     if (!pts.length) symbolData.delete(sym);
   }
 }
@@ -495,21 +974,30 @@ function computeSummary() {
   const c1m  = now - WIN_1M;
   const c2ms = now - WIN_2M;
   const rows = [];
+  const seen = new Set();
 
   for (const [sym, pts] of symbolData) {
+    // Safe filter — works even if pts has minor out-of-order entries
     const pts1m = pts.filter(p => p.x >= c1m);
     const pts2m = pts.filter(p => p.x >= c2ms && p.x < c1m);
-    if (pts1m.length < 5) continue;                      // min 5 trades
+    if (pts1m.length < 3) continue;                      // min 3 trades
+
+    const marketCap = (symMeta[sym] || {}).market_cap ?? null;
+    const capTier   = getTier(marketCap);
+    const tc        = tierConfig[capTier] || tierConfig.other;
+    // Use stricter of bull/bear min val (we don't know direction yet at this filter stage)
+    const minVal = Math.min(tc.bull.valK, tc.bear.valK) * 1_000;
 
     const value1m = pts1m.reduce((s, p) => s + p.y * (p.sz || 0), 0);
-    if (value1m < VALUE_THRESHOLD) continue;              // below $ threshold — skip entirely
+    if (value1m < minVal) continue;
 
     const cnt1m  = pts1m.length;
     const vwap1m = calcVwap(pts1m);
     const vwap2m = pts2m.length ? calcVwap(pts2m) : null;
     const delta  = vwap2m != null ? ((vwap1m - vwap2m) / vwap2m) * 100 : null;
 
-    rows.push({ sym, value1m, vwap1m, vwap2m, delta, cnt1m });
+    rows.push({ sym, value1m, vwap1m, vwap2m, delta, cnt1m, capTier });
+    seen.add(sym);
   }
 
   rows.sort((a, b) => {
@@ -517,6 +1005,12 @@ function computeSummary() {
     const db = b.delta != null ? Math.abs(b.delta) : -1;
     return da !== db ? db - da : b.value1m - a.value1m;
   });
+
+  // Pad with stale alertHistory rows so the table never empties while alerts are live
+  for (const [, e] of alertHistory) {
+    if (!seen.has(e.row.sym)) rows.push({ ...e.row, _stale: true });
+  }
+
   return rows;
 }
 
@@ -524,28 +1018,41 @@ function computeSummary() {
 // RENDER: SPLIT ALERTS + SUMMARY TABLE
 // ══════════════════════════════════════════════════════════════════════════════
 const sumBody  = document.getElementById('sumBody');
+const volBody  = document.getElementById('volBody');
 const bullWrap = document.getElementById('bullWrap');
 const bearWrap = document.getElementById('bearWrap');
 const bullEmpty= document.getElementById('bullEmpty');
 const bearEmpty= document.getElementById('bearEmpty');
 
 function buildAlertRow(r, ts) {
-  const bull   = r.delta > 0;
-  const age    = Date.now() - ts;
-  const stale  = age > 4 * 60_000;
-  const ageStr = age < 60_000 ? Math.floor(age / 1000) + 's ago' : Math.floor(age / 60_000) + 'm ago';
-  const div    = document.createElement('div');
-  div.className = 'alert-row ' + (bull ? 'bull' : 'bear') + (stale ? ' stale' : '');
+  const bull    = r.delta > 0;
+  const age     = Date.now() - ts;
+  const stale   = age > 4 * 60_000;
+  const ageStr  = age < 60_000 ? Math.floor(age / 1000) + 's ago' : Math.floor(age / 60_000) + 'm ago';
+
+  // Per-tier flash check
+  const tc      = tierConfig[r.capTier] || tierConfig.other;
+  const sub     = bull ? tc.bull : tc.bear;
+  const isFlash = !stale && r.value1m >= sub.flashM * 1_000_000;
+
+  const div = document.createElement('div');
+  div.className = 'alert-row ' + (bull ? 'bull' : 'bear') +
+                  (stale ? ' stale' : '') + (isFlash ? ' flash-alert' : '');
+
+  // 🔥 momentum + ⚡ flash badges
+  const momBadge  = yesterdayTop.has(r.sym) ? ' 🔥' : '';
+  const boltBadge = isFlash ? ' <span class="flash-bolt">⚡</span>' : '';
+
   div.innerHTML =
     `<div class="ar-top">` +
-      `<span class="ar-sym">${r.sym}</span>` +
+      `<span class="ar-sym">${esc(r.sym)}${boltBadge}${momBadge}</span>` +
       `<span class="ar-delta ${bull ? 'bull' : 'bear'}">${fmtDelta(r.delta)}</span>` +
       `<span class="ar-val">${fmtVal(r.value1m)}</span>` +
       `<span class="ar-time">${new Date(ts).toTimeString().slice(0,8)}<span class="ar-age"> ${ageStr}</span></span>` +
     `</div>` +
     `<div class="ar-sub">VWAP 1m <b style="color:var(--text)">${fmtPrice(r.vwap1m)}</b>` +
     ` vs 2m <b style="color:var(--dim)">${fmtPrice(r.vwap2m)}</b> · ${r.cnt1m} trades</div>`;
-  div.addEventListener('click', () => selectSym(r.sym));
+  div.addEventListener('click', () => { selectSym(r.sym, true); loadNews(r.sym); });
   return div;
 }
 
@@ -553,17 +1060,35 @@ function renderSummary(rows) {
   const now = Date.now();
 
   // ── 1. Qualify fresh alerts ────────────────────────────────────────────
-  const freshAlerts = rows.filter(r =>
-    r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD
-  );
+  const freshAlerts = rows.filter(r => {
+    if (r.delta == null) return false;
+    if (suppressedSyms.has(r.sym)) {
+      const s = suppressedSyms.get(r.sym);
+      if (!s.expires_at || new Date(s.expires_at) > new Date()) return false;
+    }
+    const tc  = tierConfig[r.capTier] || tierConfig.other;
+    const sub = r.delta > 0 ? tc.bull : tc.bear;
+    return Math.abs(r.delta) >= sub.delta &&
+           r.value1m >= sub.valK * 1_000 &&
+           r.cnt1m   >= sub.trades;
+  });
 
   // ── 2. Update alertHistory; first-time actions ────────────────────────
   for (const r of freshAlerts) {
     const existing = alertHistory.get(r.sym);
     if (!existing) {
-      // Very first alert for this ticker today
+      // Very first alert for this ticker (or expired and back)
       if (!selectedSym) selectSym(r.sym);    // auto-select if nothing pinned
-      loadTwitter(r.sym);                    // fetch X sentiment (once per ticker per session)
+      logAlert(r, 'new');                    // persist alert to log
+    } else {
+      // Ticker already alerting — log significant escalations
+      const prevAbs = Math.abs(existing.row.delta || 0);
+      const newAbs  = Math.abs(r.delta || 0);
+      const _tc = tierConfig[r.capTier] || tierConfig.other;
+      const _sub = r.delta > 0 ? _tc.bull : _tc.bear;
+      if (newAbs >= prevAbs * 1.5 && newAbs >= _sub.delta * 2) {
+        logAlert(r, 'escalation');
+      }
     }
     alertHistory.set(r.sym, {
       row:     r,
@@ -572,9 +1097,9 @@ function renderSummary(rows) {
     });
   }
 
-  // ── 3. Expire entries ─────────────────────────────────────────────────
+  // ── 3. Expire entries — hard 5-min cap from FIRST appearance, not last update
   for (const [sym, e] of alertHistory)
-    if (now - e.lastTs > ALERT_TTL) alertHistory.delete(sym);
+    if (now - e.firstTs > ALERT_TTL) alertHistory.delete(sym);
 
   // ── 4. Split + sort ────────────────────────────────────────────────────
   const bulls = [], bears = [];
@@ -617,24 +1142,508 @@ function renderSummary(rows) {
   for (const r of rows) {
     const tr      = document.createElement('tr');
     const bull    = r.delta != null && r.delta > 0;
-    const flagged = r.delta != null && Math.abs(r.delta) >= DELTA_THRESHOLD;
-    if (flagged) tr.className = bull ? 'hl-bull' : 'hl-bear';
+    const _rtc  = tierConfig[r.capTier] || tierConfig.other;
+    const _rsub = r.delta != null && r.delta > 0 ? _rtc.bull : _rtc.bear;
+    const flagged = r.delta != null && Math.abs(r.delta) >= (_rsub ? _rsub.delta : 3);
+    // Flash: value1m >= tier flash threshold
+    const isFlashAlert = !r._stale && r.value1m >= (_rsub ? _rsub.flashM * 1_000_000 : 1_000_000);
+    if (r._stale) {
+      tr.style.opacity = '0.45';
+      tr.title = 'Below live threshold — last known values';
+    } else if (flagged) {
+      tr.className = bull ? 'hl-bull' : 'hl-bear';
+    }
     const dClass = r.delta == null ? 'delta-nil' : (bull ? 'delta-pos' : (r.delta < 0 ? 'delta-neg' : 'delta-nil'));
-    const flag   = flagged ? (bull ? ' 🔥' : ' 🔻') : '';
+    const flag   = flagged && !r._stale ? (bull ? ' 🔥' : ' 🔻') : '';
+    // 🔥 momentum badge: ticker had top-50 dollar volume yesterday
+    const momBadge = yesterdayTop.has(r.sym)
+      ? ' <span title="Top-50 volume yesterday" style="font-size:10px;cursor:default">🔥</span>'
+      : '';
+    // ⚡ flash bolt for large-value alerts
+    const alertBolt = isFlashAlert
+      ? ' <span class="flash-bolt" title="High value alert">⚡</span>'
+      : '';
+    if (isFlashAlert) tr.classList.add('flash-row');
     tr.innerHTML =
-      `<td class="sym">${r.sym}</td>` +
+      `<td class="sym">${r.sym}${alertBolt}${momBadge}</td>` +
       `<td class="r" style="color:var(--yellow)">${fmtVal(r.value1m)}</td>` +
       `<td class="r">${fmtPrice(r.vwap1m)}</td>` +
       `<td class="r" style="color:var(--dim)">${fmtPrice(r.vwap2m)}</td>` +
       `<td class="r ${dClass}">${fmtDelta(r.delta)}${flag}</td>` +
-      `<td class="r" style="color:var(--dim)">${r.cnt1m}</td>`;
-    tr.addEventListener('click', () => selectSym(r.sym));
+      `<td class="r" style="color:var(--dim)">${r._stale ? '—' : r.cnt1m}</td>`;
+    tr.addEventListener('click', () => { selectSym(r.sym, true); loadNews(r.sym); });
     frag.appendChild(tr);
   }
   sumBody.replaceChildren(frag);
 }
 
-function refreshSummary() { renderSummary(computeSummary()); }
+// ── SETTINGS GRID BUILDER ──────────────────────────────────────────────────
+const TIERS5 = ['nano','small','mid','big','other'];
+
+const BULL_BEAR_ROWS = [
+  { key:'delta',   label:'Min Δ%',     unit:'%',  step:0.5 },
+  { key:'valK',    label:'Min $ Val',  unit:'K',  step:5   },
+  { key:'trades',  label:'Min Trades', unit:'',   step:1   },
+  { key:'flashM',  label:'⚡ Flash ≥', unit:'M',  step:0.05},
+];
+const VOL_ROWS = [
+  { key:'spike',   label:'Spike ≥',    unit:'×',  step:1   },
+  { key:'minVolK', label:'Min $ Vol',  unit:'K',  step:5   },
+  { key:'deltaP',  label:'Min Price Δ',unit:'%',  step:0.5 },
+  { key:'flashM',  label:'⚡ Flash ≥', unit:'M',  step:0.05},
+];
+
+function _buildGrid(gridId, subKey, rowDefs) {
+  const grid = document.getElementById(gridId);
+  // Remove old rows (keep header row — first 6 cells)
+  while (grid.children.length > 6) grid.removeChild(grid.lastChild);
+  for (const rd of rowDefs) {
+    const lbl = document.createElement('div');
+    lbl.className = 'sg-row-lbl';
+    lbl.textContent = rd.label;
+    grid.appendChild(lbl);
+    for (const t of TIERS5) {
+      const cell = document.createElement('div');
+      cell.className = 'sg-cell';
+      const inp = document.createElement('input');
+      inp.type  = 'number';
+      inp.step  = rd.step;
+      inp.min   = 0;
+      inp.id    = `sm_${gridId}_${t}_${rd.key}`;
+      inp.value = (tierConfig[t][subKey][rd.key] || 0);
+      const unit = document.createElement('span');
+      unit.className = 'sg-unit';
+      unit.textContent = rd.unit;
+      cell.appendChild(inp);
+      if (rd.unit) cell.appendChild(unit);
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function loadSettingsUI() {
+  // Cap boundaries
+  document.getElementById('smNanoMaxM').value  = tierConfig.nano.maxCapM;
+  document.getElementById('smSmallMaxM').value = tierConfig.small.maxCapM;
+  document.getElementById('smMidMaxM').value   = tierConfig.mid.maxCapM;
+  document.getElementById('smBigMaxM').value   = tierConfig.big.maxCapM;
+  // Build grids
+  _buildGrid('bullGrid', 'bull', BULL_BEAR_ROWS);
+  _buildGrid('bearGrid', 'bear', BULL_BEAR_ROWS);
+  _buildGrid('volGrid',  'vol',  VOL_ROWS);
+}
+
+function _readGrid(gridId, subKey, rowDefs) {
+  const result = {};
+  for (const t of TIERS5) {
+    result[t] = {};
+    for (const rd of rowDefs) {
+      const el = document.getElementById(`sm_${gridId}_${t}_${rd.key}`);
+      result[t][rd.key] = el ? +el.value : (tierConfig[t][subKey][rd.key]);
+    }
+  }
+  return result;
+}
+
+function saveSettings() {
+  const nanoMaxM  = +document.getElementById('smNanoMaxM').value  || DEFAULT_TIER_CONFIG.nano.maxCapM;
+  const smallMaxM = +document.getElementById('smSmallMaxM').value || DEFAULT_TIER_CONFIG.small.maxCapM;
+  const midMaxM   = +document.getElementById('smMidMaxM').value   || DEFAULT_TIER_CONFIG.mid.maxCapM;
+  const bigMaxM   = +document.getElementById('smBigMaxM').value   || DEFAULT_TIER_CONFIG.big.maxCapM;
+
+  const bullData = _readGrid('bullGrid', 'bull', BULL_BEAR_ROWS);
+  const bearData = _readGrid('bearGrid', 'bear', BULL_BEAR_ROWS);
+  const volData  = _readGrid('volGrid',  'vol',  VOL_ROWS);
+
+  for (const t of TIERS5) {
+    tierConfig[t].bull = bullData[t];
+    tierConfig[t].bear = bearData[t];
+    tierConfig[t].vol  = volData[t];
+  }
+  tierConfig.nano.maxCapM  = nanoMaxM;
+  tierConfig.small.maxCapM = smallMaxM;
+  tierConfig.mid.maxCapM   = midMaxM;
+  tierConfig.big.maxCapM   = bigMaxM;
+
+  localStorage.setItem('tierConfig2', JSON.stringify(tierConfig));
+  refreshSummary();
+
+  const btn = document.querySelector('.sm-save-btn');
+  btn.textContent = '✓ Saved!';
+  setTimeout(() => btn.textContent = '✓ Save & Apply', 1500);
+}
+
+function resetSettings() {
+  tierConfig = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG));
+  localStorage.removeItem('tierConfig2');
+  localStorage.removeItem('tierConfig');
+  loadSettingsUI();
+  refreshSummary();
+}
+
+// ── SETTINGS MODAL ────────────────────────────────────────────────────────────
+function openSettings() {
+  loadSettingsUI();
+  renderSuppressedList();
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+}
+
+// ── SUPPRESSED STOCKS ─────────────────────────────────────────────────────────
+async function fetchSuppressed() {
+  try {
+    const res  = await fetch('/suppressed');
+    const data = await res.json();
+    suppressedSyms.clear();
+    for (const r of (data.suppressed || [])) {
+      suppressedSyms.set(r.sym, { expires_at: r.expires_at, reason: r.reason });
+    }
+  } catch(e) { console.warn('[suppressed] fetch failed', e); }
+}
+
+function renderSuppressedList() {
+  const list = document.getElementById('suppList');
+  if (!suppressedSyms.size) {
+    list.innerHTML = '<div style="font-size:10px;color:var(--dim);font-style:italic">No suppressed stocks.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const [sym, s] of suppressedSyms) {
+    const row = document.createElement('div');
+    row.className = 'supp-row';
+    const exp = s.expires_at ? `until ${s.expires_at.slice(0,10)}` : 'forever';
+    row.innerHTML =
+      `<span class="supp-sym">${esc(sym)}</span>` +
+      `<span class="supp-exp">${exp}${s.reason ? ' · ' + esc(s.reason) : ''}</span>` +
+      `<button class="supp-del" onclick="removeSuppressed('${esc(sym)}')">✕ Remove</button>`;
+    list.appendChild(row);
+  }
+}
+
+async function addSuppressed() {
+  const sym = document.getElementById('suppSymInput').value.trim().toUpperCase();
+  if (!sym) return;
+  const dur = document.getElementById('suppDurSel').value;
+  const expires_at = dur === 'day'
+    ? new Date(new Date().setHours(23,59,59,0)).toISOString()
+    : null;
+  try {
+    await fetch(`/suppressed/${sym}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expires_at }),
+    });
+    await fetchSuppressed();
+    renderSuppressedList();
+    document.getElementById('suppSymInput').value = '';
+  } catch(e) { console.warn('[suppressed] add failed', e); }
+}
+
+async function removeSuppressed(sym) {
+  try {
+    await fetch(`/suppressed/${sym}`, { method: 'DELETE' });
+    await fetchSuppressed();
+    renderSuppressedList();
+  } catch(e) { console.warn('[suppressed] remove failed', e); }
+}
+
+function refreshSummary() {
+  renderSummary(computeSummary());
+  renderVolumeSummary();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VOLUME SPIKE  (1m dollar vol vs avg of prior 4m)
+// ══════════════════════════════════════════════════════════════════════════════
+// ── Cap-tier classification (uses user-defined boundaries from tierConfig) ────
+// Tiers are evaluated in order: nano → small → mid → unknown.
+// maxCapM = 0 for unknown means "catch-all".
+const TIER_ORDER_KEYS = ['nano', 'small', 'mid', 'big'];
+
+function getTier(marketCap) {
+  if (marketCap == null) return 'other';
+  for (const key of TIER_ORDER_KEYS) {
+    const t = tierConfig[key];
+    if (t && t.maxCapM > 0 && marketCap < t.maxCapM * 1_000_000) return key;
+  }
+  return 'other';   // above big, or no maxCapM set
+}
+
+// Cap-tier colours (read from tierConfig so user colour customisation is easy later)
+function tierColor(key) {
+  return (tierConfig[key] || tierConfig.other).color || '#888';
+}
+
+function computeVolumeSummary() {
+  const now = Date.now();
+  const c1m = now - WIN_1M;
+  const spikes = [];   // confirmed spikes — have baseline, ratio ≥ tier threshold
+  const newAct = [];   // new activity — no prior baseline data
+
+  for (const [sym, pts] of symbolData) {
+    const pts1m = pts.filter(p => p.x >= c1m);
+    const pts4m = pts.filter(p => p.x <  c1m);   // 1–5 min ago
+
+    if (!pts1m.length) continue;
+
+    // Skip suppressed symbols
+    if (suppressedSyms.has(sym)) {
+      const s = suppressedSyms.get(sym);
+      if (!s.expires_at || new Date(s.expires_at) > new Date()) continue;
+    }
+
+    // Classify tier live using user-defined boundaries + raw market_cap from symMeta
+    const marketCap   = (symMeta[sym] || {}).market_cap ?? null;
+    const capTier     = getTier(marketCap);
+    const tc          = tierConfig[capTier] || tierConfig.other;
+    const spikeThresh = tc.vol.spike;
+    const minVol      = tc.vol.minVolK * 1_000;
+    const deltaPct    = tc.vol.deltaP;
+    const lastTs      = pts1m[pts1m.length - 1].x;  // most recent tick timestamp
+
+    // Recent 1-min dollar volume
+    const vol1m = pts1m.reduce((s, p) => s + p.y * (p.sz || 0), 0);
+    if (vol1m < minVol) continue;
+
+    // Price delta % check (small-caps need bigger moves to qualify)
+    if (deltaPct > 0 && pts1m.length >= 2) {
+      const pct = Math.abs(pts1m[pts1m.length-1].y - pts1m[0].y) / pts1m[0].y * 100;
+      if (pct < deltaPct) continue;
+    }
+
+    // Baseline: average dollar volume per minute over prior 4 minutes
+    const vol4m      = pts4m.reduce((s, p) => s + p.y * (p.sz || 0), 0);
+    const basePerMin = vol4m / 4;
+    const price      = pts1m[pts1m.length - 1].y;
+
+    if (basePerMin < 1) {
+      // No prior baseline — goes to New Activity section
+      newAct.push({ sym, vol1m, basePerMin: 0, spike: Infinity, price, cnt: pts1m.length, capTier, lastTs });
+    } else {
+      const spike = vol1m / basePerMin;
+      if (spike >= spikeThresh) {
+        spikes.push({ sym, vol1m, basePerMin, spike, price, cnt: pts1m.length, capTier, lastTs });
+      }
+    }
+  }
+
+  // ── Persist spikes in volSpikeCache (5-min TTL from firstTs) ────────────
+  const now2 = Date.now();
+  for (const r of spikes) {
+    const cached = volSpikeCache.get(r.sym);
+    if (!cached) {
+      volSpikeCache.set(r.sym, { row: r, firstTs: now2, lastTs: now2 });
+    } else {
+      volSpikeCache.set(r.sym, { row: r, firstTs: cached.firstTs, lastTs: now2 });
+    }
+  }
+  for (const r of newAct) {
+    const cached = volSpikeCache.get(r.sym);
+    if (!cached) {
+      volSpikeCache.set(r.sym, { row: r, firstTs: now2, lastTs: now2, _newAct: true });
+    } else {
+      volSpikeCache.set(r.sym, { ...cached, row: r, lastTs: now2 });
+    }
+  }
+
+  // Prune expired (> 5 min from firstTs) and merge stale cached rows back in
+  const liveSyms = new Set([...spikes, ...newAct].map(r => r.sym));
+  for (const [sym, c] of volSpikeCache) {
+    if (now2 - c.firstTs > ALERT_TTL) {
+      volSpikeCache.delete(sym);
+      continue;
+    }
+    // Not live right now but still within TTL — add as stale
+    if (!liveSyms.has(sym)) {
+      const staleRow = { ...c.row, _stale: true };
+      if (c._newAct) newAct.push(staleRow);
+      else           spikes.push(staleRow);
+    }
+  }
+
+  // Sort by most recent activity first within each bucket
+  spikes.sort((a, b) => (b._stale ? 0 : b.lastTs || 0) - (a._stale ? 0 : a.lastTs || 0));
+  newAct.sort((a, b) => (b._stale ? 0 : b.lastTs || 0) - (a._stale ? 0 : a.lastTs || 0));
+
+  return { spikes, newAct };
+}
+
+function _volRow(r) {
+  const tr       = document.createElement('tr');
+  const spikeStr = isFinite(r.spike) ? r.spike.toFixed(1) + '×' : '—';
+
+  // Stale (cached, no longer in live 1m window) — dim the row
+  if (r._stale) {
+    tr.style.opacity = '0.45';
+    tr.title = 'No longer in live 1m window — cached (5-min TTL)';
+  }
+
+  // ⚡ flash highlight — vol1m ≥ tier-specific vol flash threshold (live rows only)
+  const _vtc    = tierConfig[r.capTier] || tierConfig.other;
+  const isFlash = !r._stale && r.vol1m >= (_vtc.vol.flashM * 1_000_000);
+  if (isFlash) tr.classList.add('flash-row');
+
+  // 🔥 momentum badge — ticker was in yesterday's top-50 by dollar volume
+  const fire = yesterdayTop.has(r.sym)
+    ? ' <span title="Top-50 volume yesterday" style="font-size:11px;cursor:default">🔥</span>'
+    : '';
+
+  // ⚡ flash bolt badge
+  const bolt = isFlash
+    ? ' <span class="flash-bolt" title="1m vol ≥ $1M">⚡</span>'
+    : '';
+
+  // Cap-tier chip
+  const tierCol   = tierColor(r.capTier);
+  const tierBadge = r.capTier !== 'unknown'
+    ? ` <span style="font-size:9px;background:${tierCol}22;color:${tierCol};` +
+      `padding:1px 4px;border-radius:3px;border:1px solid ${tierCol}44;` +
+      `font-weight:600;letter-spacing:.04em;vertical-align:middle">${r.capTier.toUpperCase()}</span>`
+    : '';
+
+  // Vol value — gold if flash
+  const volStyle = isFlash ? 'color:#ffd700;font-weight:700' : 'color:var(--teal)';
+
+  tr.innerHTML =
+    `<td class="vol-sym" onclick="selectSym('${esc(r.sym)}',true);loadNews('${esc(r.sym)}')">${esc(r.sym)}${bolt}${fire}${tierBadge}</td>` +
+    `<td class="r" style="${volStyle}">${fmtVal(r.vol1m)}</td>` +
+    `<td class="r" style="color:var(--dim)">${r.basePerMin > 0 ? fmtVal(r.basePerMin) : '—'}</td>` +
+    `<td class="r vol-spike">${esc(spikeStr)}</td>` +
+    `<td class="r">${fmtPrice(r.price)}</td>` +
+    `<td class="r" style="color:var(--dim)">${r.cnt}</td>`;
+  return tr;
+}
+
+
+const _TIER_ORDER = ['nano', 'small', 'mid', 'big', 'other'];
+const _TIER_BODIES = {
+  nano:  () => document.getElementById('volBodyNano'),
+  small: () => document.getElementById('volBodySmall'),
+  mid:   () => document.getElementById('volBodyMid'),
+  big:   () => document.getElementById('volBodyBig'),
+  other: () => document.getElementById('volBodyOther'),
+};
+const _TIER_CNTS = {
+  nano:  () => document.getElementById('tcNanoCnt'),
+  small: () => document.getElementById('tcSmallCnt'),
+  mid:   () => document.getElementById('tcMidCnt'),
+  big:   () => document.getElementById('tcBigCnt'),
+  other: () => document.getElementById('tcOtherCnt'),
+};
+const _TIER_CONTAINERS = {
+  nano:  () => document.getElementById('tcNano'),
+  small: () => document.getElementById('tcSmall'),
+  mid:   () => document.getElementById('tcMid'),
+  big:   () => document.getElementById('tcBig'),
+  other: () => document.getElementById('tcOther'),
+};
+
+function _fmtCapM(m) {
+  if (!m) return '—';
+  return m >= 1000 ? `$${(m/1000).toFixed(m>=10000?0:1)}B` : `$${m}M`;
+}
+
+function renderVolumeSummary() {
+  const { spikes, newAct } = computeVolumeSummary();
+
+  // Update tier range labels to reflect current user-defined boundaries
+  const tc = tierConfig;
+  document.getElementById('tcNanoRange').textContent  = `under ${_fmtCapM(tc.nano.maxCapM)}`;
+  document.getElementById('tcSmallRange').textContent = `${_fmtCapM(tc.nano.maxCapM)} – ${_fmtCapM(tc.small.maxCapM)}`;
+  document.getElementById('tcMidRange').textContent   = `${_fmtCapM(tc.small.maxCapM)} – ${_fmtCapM(tc.mid.maxCapM)}`;
+  document.getElementById('tcBigRange').textContent   = `${_fmtCapM(tc.mid.maxCapM)} – ${_fmtCapM(tc.big.maxCapM)}`;
+
+  // Group confirmed spikes by tier
+  const grouped = { nano: [], small: [], mid: [], big: [], other: [] };
+  for (const r of spikes) {
+    const t = grouped[r.capTier] !== undefined ? r.capTier : 'other';
+    grouped[t].push(r);
+  }
+
+  let hasAny = false;
+
+  // Render each tier container
+  for (const t of _TIER_ORDER) {
+    const rows      = grouped[t];
+    const container = _TIER_CONTAINERS[t]();
+    const body      = _TIER_BODIES[t]();
+    const cnt       = _TIER_CNTS[t]();
+    if (!rows.length) { container.style.display = 'none'; continue; }
+    hasAny = true;
+    container.style.display = '';
+    cnt.textContent = rows.length;
+    const frag = document.createDocumentFragment();
+    for (const r of rows) frag.appendChild(_volRow(r));
+    body.replaceChildren(frag);
+  }
+
+  // New Activity section
+  const newActContainer = document.getElementById('tcNewAct');
+  const newActBody      = document.getElementById('volBodyNewAct');
+  const newActCnt       = document.getElementById('tcNewActCnt');
+  if (newAct.length) {
+    hasAny = true;
+    newActContainer.style.display = '';
+    newActCnt.textContent = newAct.length;
+    const frag = document.createDocumentFragment();
+    for (const r of newAct) frag.appendChild(_volRow(r));
+    newActBody.replaceChildren(frag);
+  } else {
+    newActContainer.style.display = 'none';
+  }
+
+  document.getElementById('volEmpty').style.display = hasAny ? 'none' : '';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BARS LOADER  (always called on symbol switch)
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadBars(sym) {
+  if (!sym) return;
+  document.getElementById('winBadge').textContent = '…loading';
+  try {
+    const res  = await fetch(`/bars/${sym}`);
+    const data = await res.json();
+    // Keep only the last 120 bars (~2 hrs) to limit memory
+    chartBars = (data.bars || []).slice(-120);
+    rebuildMinuteChart();
+  } catch {
+    document.getElementById('winBadge').textContent = 'Error';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NEWS LOADER  (only on explicit user action or auto-select)
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadNews(sym) {
+  if (!sym) return;
+
+  // Serve from cache if fresh (< NEWS_CACHE_TTL)
+  const cached = newsCache[sym];
+  if (cached && Date.now() - cached.ts < NEWS_CACHE_TTL) {
+    document.getElementById('newsSym').textContent = sym;
+    renderNews(cached.articles, sym);
+    if (twitterCache[sym]) injectTwitterCard(sym, twitterCache[sym]);
+    return;
+  }
+
+  document.getElementById('newsSym').textContent = sym;
+  document.getElementById('newsPanel').innerHTML = '<div class="news-loading">Loading news…</div>';
+  try {
+    const res  = await fetch(`/news/${sym}`);
+    const data = await res.json();
+    const articles = data.articles || [];
+    newsCache[sym] = { articles, ts: Date.now() };
+    renderNews(articles, sym);
+  } catch {
+    document.getElementById('newsPanel').innerHTML = '<div class="news-empty">Failed to load news.</div>';
+  }
+
+  if (twitterCache[sym]) injectTwitterCard(sym, twitterCache[sym]);
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SYMBOL SELECTOR
@@ -642,73 +1651,105 @@ function refreshSummary() { renderSummary(computeSummary()); }
 const symSel = document.getElementById('symSel');
 symSel.addEventListener('change', () => {
   const v = symSel.value || null;
-  if (v) selectSym(v);
+  if (v) selectSym(v, true);
   else { selectedSym = null; chartBars = []; rebuildMinuteChart(); }
 });
 
 function registerSym(sym) { allSyms.add(sym); }
 
 function updateChartDropdown(alerts) {
-  const prev = selectedSym;
-  while (symSel.options.length > 1) symSel.remove(1);
-  for (const r of alerts) {
-    const opt = document.createElement('option');
-    opt.value = r.sym;
-    opt.textContent = `${r.sym}  ${r.delta >= 0 ? '🔥' : '🔻'} ${r.delta.toFixed(1)}%`;
-    symSel.appendChild(opt);
+  const alertMap = new Map(alerts.map(r => [r.sym, r]));
+  for (let i = symSel.options.length - 1; i >= 1; i--) {
+    if (!alertMap.has(symSel.options[i].value)) symSel.remove(i);
   }
-  if (prev && alerts.find(r => r.sym === prev)) symSel.value = prev;
+  const existing = new Map(
+    Array.from(symSel.options).slice(1).map(o => [o.value, o])
+  );
+  for (const r of alerts) {
+    const label = `${r.sym}  ${r.delta >= 0 ? '🔥' : '🔻'} ${r.delta.toFixed(1)}%`;
+    const opt   = existing.get(r.sym);
+    if (opt) { if (opt.textContent !== label) opt.textContent = label; }
+    else      { const o = document.createElement('option'); o.value = r.sym; o.textContent = label; symSel.appendChild(o); }
+  }
+  if (selectedSym && alertMap.has(selectedSym)) symSel.value = selectedSym;
 }
 
-function selectSym(sym) {
-  if (selectedSym === sym) return;   // already selected
+// fromUser=true → also load news; false → bars only (auto-select on first alert)
+function selectSym(sym, fromUser = false) {
+  if (selectedSym === sym) return;
   selectedSym = sym;
   symSel.value = sym;
-  loadBarsAndNews(sym);
+  loadBars(sym);
+  if (fromUser) loadNews(sym);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BARS + NEWS LOADER
+// FETCH X BUTTON
 // ══════════════════════════════════════════════════════════════════════════════
-async function loadBarsAndNews(sym) {
-  if (!sym) return;
-
-  // ── bars ──────────────────────────────────────────────────────────────────
-  document.getElementById('winBadge').textContent = '…loading';
-  try {
-    const res  = await fetch(`/bars/${sym}`);
-    const data = await res.json();
-    chartBars = data.bars || [];
-    rebuildMinuteChart();
-  } catch {
-    document.getElementById('winBadge').textContent = 'Error';
-  }
-
-  // ── news ──────────────────────────────────────────────────────────────────
-  document.getElementById('newsSym').textContent = sym;
-  document.getElementById('newsPanel').innerHTML = '<div class="news-loading">Loading news…</div>';
-  try {
-    const res  = await fetch(`/news/${sym}`);
-    const data = await res.json();
-    newsCache[sym] = data.articles || [];
-    renderNews(newsCache[sym], sym);
-  } catch {
-    document.getElementById('newsPanel').innerHTML = '<div class="news-empty">Failed to load news.</div>';
-  }
-
-  // ── inject cached Twitter card if already fetched for this ticker ─────────
-  if (twitterCache[sym]) injectTwitterCard(sym, twitterCache[sym]);
+function onFetchXClick() {
+  if (!selectedSym) return;
+  const btn = document.getElementById('fetchXBtn');
+  btn.textContent = '⏳ Fetching…';
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  // force=true clears the cache so we always get a fresh call
+  loadTwitter(selectedSym, true).finally(() => {
+    btn.innerHTML = '🐦 Fetch X Posts';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// TWITTER / X SENTIMENT  (first alert per ticker per session)
+// ALERT LOGGER  (POSTs to backend — alerts only)
 // ══════════════════════════════════════════════════════════════════════════════
-async function loadTwitter(sym) {
-  if (twitterCache[sym]) {
-    // Already fetched — just inject if this sym is visible
-    if (selectedSym === sym) injectTwitterCard(sym, twitterCache[sym]);
-    return;
+function logAlert(r, tag = 'new') {
+  console.log(`[logAlert] ${tag} → ${r.sym}  Δ${r.delta?.toFixed(2)}%  $${r.value1m?.toFixed(0)}`);
+  fetch('/log/alert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tag,
+      sym:      r.sym,
+      delta:    r.delta,
+      value1m:  r.value1m,
+      vwap1m:   r.vwap1m,
+      vwap2m:   r.vwap2m,
+      cnt1m:    r.cnt1m,
+      direction: r.delta > 0 ? 'bull' : 'bear',
+      ts:       new Date().toISOString(),
+    }),
+  })
+  .then(res => res.json())
+  .then(data => {
+    _histLoaded = true;
+    if (data.ok) {
+      setTimeout(fetchAlertHistory, 800);   // refresh history tab immediately after write
+    } else {
+      console.warn('[logAlert] server write failed:', data.error);
+    }
+  })
+  .catch(err => console.warn('[logAlert] fetch error:', err));
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TWITTER / X SENTIMENT  (first alert per ticker; re-fetches on big escalation)
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadTwitter(sym, force = false) {
+  if (twitterCache[sym] && !force) {
+    // Re-fetch if cached data is older than 30 min (stale)
+    const age = twitterCache[sym].fetched_at
+      ? Date.now() - new Date(twitterCache[sym].fetched_at).getTime()
+      : Infinity;
+    if (age < 30 * 60_000) {
+      // Still fresh — just inject if this sym is currently selected
+      if (selectedSym === sym) injectTwitterCard(sym, twitterCache[sym]);
+      return;
+    }
+    // Stale cache — fall through to re-fetch
+    delete twitterCache[sym];
   }
+  if (force && twitterCache[sym]) delete twitterCache[sym];
 
   // Show loading indicator in news panel if this ticker is selected
   if (selectedSym === sym) showTwitterLoading(sym);
@@ -717,16 +1758,20 @@ async function loadTwitter(sym) {
     const res  = await fetch(`/twitter/${sym}`);
     const data = await res.json();
 
+    console.log(`[Twitter] ${sym} →`, { summary: data.summary, tweets: data.tweets?.length, error: data.error });
+
     if (data.error && !data.summary) {
-      console.warn(`Twitter fetch error for ${sym}:`, data.error);
-      removeTwitterLoading();
-      return;
+      // Mark as "attempted" so we show an error card rather than nothing
+      data.summary = `⚠ X search error: ${data.error}`;
+      data.tweets  = [];
     }
 
     twitterCache[sym] = data;
 
-    // Only render if this ticker is still selected when response arrives
+    // Inject immediately if this ticker is currently selected
     if (selectedSym === sym) injectTwitterCard(sym, data);
+    // Also store so loadBarsAndNews can pick it up even if sym not selected yet
+
   } catch (e) {
     console.warn('Twitter fetch failed:', e);
     removeTwitterLoading();
@@ -756,7 +1801,11 @@ function injectTwitterCard(sym, data) {
   const old = document.getElementById('twitterCard');
   if (old) old.remove();
 
-  if (!data.summary && (!data.tweets || !data.tweets.length)) return;
+  // Always show the card — even if no tweets, display a "no posts" state
+  const hasContent = (data.summary && data.summary.trim()) || (data.tweets && data.tweets.length);
+  if (!hasContent) {
+    data = { ...data, summary: 'No relevant X posts found for $' + sym + ' in the last 24h.', tweets: [] };
+  }
 
   const card = document.createElement('div');
   card.id        = 'twitterCard';
@@ -765,9 +1814,9 @@ function injectTwitterCard(sym, data) {
   // Build tweet list HTML
   const tweetsHtml = (data.tweets || []).slice(0, 5).map(t => `
     <div class="twitter-tweet">
-      <span class="twitter-handle">${t.user}</span>
-      ${t.content ? ' · ' + t.content.slice(0, 120) + (t.content.length > 120 ? '…' : '') : ''}
-      ${t.link ? ` <a href="${t.link}" target="_blank" rel="noopener">↗</a>` : ''}
+      <span class="twitter-handle">${esc(t.user)}</span>
+      ${t.content ? ' · ' + esc(t.content.slice(0, 120)) + (t.content.length > 120 ? '…' : '') : ''}
+      ${t.link ? ` <a href="${safeUrl(t.link)}" target="_blank" rel="noopener">↗</a>` : ''}
     </div>`).join('');
 
   const age = data.fetched_at
@@ -775,7 +1824,12 @@ function injectTwitterCard(sym, data) {
     : 'just now';
 
   card.innerHTML =
-    `<div class="twitter-badge">🐦 X / Twitter · ${data.cached ? 'cached' : 'live'} · ${age}</div>` +
+    `<div class="twitter-badge" style="display:flex;align-items:center;gap:6px;">` +
+      `🐦 X / Twitter · ${data.cached ? 'cached' : 'live'} · ${age}` +
+      `<button onclick="loadTwitter('${sym}',true)" style="margin-left:auto;font-size:9px;padding:1px 7px;` +
+        `border-radius:4px;border:1px solid rgba(29,155,240,.4);background:transparent;` +
+        `color:#1d9bf0;cursor:pointer;" title="Force re-fetch X posts">↻ Refresh</button>` +
+    `</div>` +
     `<div class="twitter-summary">${data.summary}</div>` +
     (tweetsHtml ? `<div class="twitter-tweets">${tweetsHtml}</div>` : '');
 
@@ -824,11 +1878,11 @@ function updateLiveBar(price, ts_ms) {
     last.c = price;
     if (price > last.h) last.h = price;
     if (price < last.l) last.l = price;
-    if (ds.length) { ds[ds.length - 1].y = price; chart.update('none'); }
+    if (ds.length) { ds[ds.length - 1].y = price; _chartDirty = true; }
   } else if (min_key > last.t) {
     chartBars.push({ t: min_key, o: price, h: price, l: price, c: price, v: 0 });
     ds.push({ x: min_key, y: price });
-    chart.update('none');
+    _chartDirty = true;
   }
   document.getElementById('curPrice').textContent = '$' + price.toFixed(2);
 }
@@ -847,12 +1901,13 @@ function fmtNewsAge(iso) {
 
 function newsItemHTML(a) {
   const symsHtml = a.symbols && a.symbols.length
-    ? `<span class="news-syms">${a.symbols.slice(0,6).join(' · ')}</span>` : '';
+    ? `<span class="news-syms">${a.symbols.slice(0,6).map(esc).join(' · ')}</span>` : '';
+  const summary  = a.summary ? esc(a.summary.slice(0, 160)) + (a.summary.length > 160 ? '…' : '') : '';
   return (
-    `<div class="news-headline"><a href="${a.url || '#'}" target="_blank" rel="noopener">${a.headline || '(no headline)'}</a></div>` +
-    (a.summary ? `<div class="news-summary">${a.summary.slice(0, 160)}${a.summary.length > 160 ? '…' : ''}</div>` : '') +
+    `<div class="news-headline"><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.headline) || '(no headline)'}</a></div>` +
+    (summary ? `<div class="news-summary">${summary}</div>` : '') +
     `<div class="news-meta">` +
-      `<span class="news-source">${a.source || '—'}</span>` +
+      `<span class="news-source">${esc(a.source) || '—'}</span>` +
       `<span class="news-time">${fmtNewsAge(a.created_at)}</span>` +
       symsHtml +
     `</div>`
@@ -892,9 +1947,7 @@ function prependNewsItem(article) {
 function updateStats() {
   const now = Date.now();
   while (rateWin.length && rateWin[0] < now - 1000) rateWin.shift();
-  let total = 0;
-  for (const [, pts] of symbolData) total += pts.length;
-  document.getElementById('sTrades').textContent  = total.toLocaleString();
+  document.getElementById('sTrades').textContent  = totalTicks.toLocaleString();
   document.getElementById('sSymbols').textContent = symbolData.size.toLocaleString();
   document.getElementById('sRate').textContent    = rateWin.length + '/s';
 }
@@ -907,13 +1960,16 @@ function processBatch(trades) {
   const cut = cutoff5m();
   for (const t of trades) {
     if (t.ts_ms < cut) continue;
+    if (LARGE_CAP_EXCLUDE.has(t.symbol)) continue;
     rateWin.push(Date.now());
     registerSym(t.symbol);
     if (!symbolData.has(t.symbol)) symbolData.set(t.symbol, []);
     symbolData.get(t.symbol).push({ x: t.ts_ms, y: t.price, sz: t.size });
+    totalTicks++;
     lastPrice.set(t.symbol, t.price);
     if (t.symbol === selectedSym) updateLiveBar(t.price, t.ts_ms);
   }
+  if (_chartDirty) { chart.update('none'); _chartDirty = false; }
   updateStats();
 }
 
@@ -924,10 +1980,79 @@ function processInit(trades) {
     registerSym(t.symbol);
     if (!symbolData.has(t.symbol)) symbolData.set(t.symbol, []);
     symbolData.get(t.symbol).push({ x: t.ts_ms, y: t.price, sz: t.size });
+    totalTicks++;
     lastPrice.set(t.symbol, t.price);
   }
   refreshSummary();
   updateStats();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════════════════════════════════════════════
+function switchTab(id) {
+  document.getElementById('paneVol').classList.toggle('hidden',  id !== 'vol');
+  document.getElementById('paneHist').classList.toggle('hidden', id !== 'hist');
+  document.getElementById('tabVol').classList.toggle('active',   id === 'vol');
+  document.getElementById('tabHist').classList.toggle('active',  id === 'hist');
+  if (id === 'hist') fetchAlertHistory();
+  if (id === 'vol')  renderVolumeSummary();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ALERT HISTORY  (persisted to backend /log/alerts)
+// ══════════════════════════════════════════════════════════════════════════════
+let _histLoaded = false;
+
+async function fetchAlertHistory() {
+  try {
+    const res  = await fetch('/log/alerts');
+    const data = await res.json();
+    renderAlertHistory(data.alerts || []);
+  } catch {
+    document.getElementById('histBody').innerHTML =
+      '<tr><td colspan="7" class="hist-empty">Failed to load history.</td></tr>';
+  }
+}
+
+function renderAlertHistory(alerts) {
+  const tbody = document.getElementById('histBody');
+  if (!alerts.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="hist-empty">No alerts recorded yet.</td></tr>';
+    document.getElementById('histFooter').textContent = '0 alerts';
+    return;
+  }
+
+  // Show newest first
+  const sorted = [...alerts].reverse();
+  const frag   = document.createDocumentFragment();
+  for (const a of sorted) {
+    const bull  = a.direction === 'bull';
+    const ts    = a.ts ? new Date(a.ts) : null;
+    const time  = ts
+      ? ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        + ' ' + ts.toTimeString().slice(0, 8)
+      : '—';
+    const dPct  = a.delta != null ? (a.delta >= 0 ? '+' : '') + Number(a.delta).toFixed(2) + '%' : '—';
+    const val   = a.value1m != null ? fmtVal(a.value1m) : '—';
+    const cnt   = a.cnt1m  != null ? a.cnt1m : '—';
+    const tag   = a.tag    || '';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td style="color:var(--dim);font-size:9.5px">${esc(time)}</td>` +
+      `<td class="ht-sym" style="cursor:pointer" onclick="selectSym('${esc(a.sym)}',true);loadNews('${esc(a.sym)}')">${esc(a.sym)}</td>` +
+      `<td class="r ${bull ? 'ht-bull' : 'ht-bear'}">${bull ? '🔥' : '🔻'}</td>` +
+      `<td class="r ${bull ? 'ht-bull' : 'ht-bear'}">${esc(dPct)}</td>` +
+      `<td class="r" style="color:var(--yellow)">${esc(val)}</td>` +
+      `<td class="r" style="color:var(--dim)">${cnt}</td>` +
+      `<td class="ht-tag">${esc(tag)}</td>`;
+    frag.appendChild(tr);
+  }
+  tbody.replaceChildren(frag);
+  document.getElementById('histFooter').textContent =
+    `${alerts.length} alerts · refreshed ${new Date().toTimeString().slice(0,8)}`;
+  _histLoaded = true;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -957,8 +2082,9 @@ function connect() {
       const a = msg.data;
       // Cache per symbol
       for (const sym of (a.symbols || [])) {
-        if (!newsCache[sym]) newsCache[sym] = [];
-        newsCache[sym].unshift(a);
+        if (!newsCache[sym]) newsCache[sym] = { articles: [], ts: Date.now() };
+        newsCache[sym].articles.unshift(a);
+        if (newsCache[sym].articles.length > 100) newsCache[sym].articles.length = 100;
       }
       // Inject into open news panel if relevant
       if (selectedSym && a.symbols && a.symbols.includes(selectedSym)) {
@@ -972,14 +2098,54 @@ function connect() {
   };
 }
 
+// ── Load universe metadata + yesterday momentum on startup ────────────────
+async function fetchUniverseMeta() {
+  try {
+    const res  = await fetch('/universe/meta');
+    const data = await res.json();
+    symMeta = data.meta || {};
+    console.log(`[universe] loaded meta for ${Object.keys(symMeta).length} symbols`);
+  } catch (e) {
+    console.warn('[universe] meta fetch failed:', e);
+  }
+}
+
+async function fetchYesterdayTop() {
+  try {
+    const res  = await fetch('/yesterday/top');
+    const data = await res.json();
+    yesterdayTop = new Set(data.tickers || []);
+    if (yesterdayTop.size) {
+      console.log(`[yesterday] 🔥 ${yesterdayTop.size} momentum tickers loaded`);
+    }
+  } catch (e) {
+    console.warn('[yesterday] fetch failed:', e);
+  }
+}
+
 connect();
+fetchAlertHistory();
+fetchUniverseMeta();
+fetchYesterdayTop();
+fetchSuppressed();
+switchTab('vol');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PERIODIC TASKS
 // ══════════════════════════════════════════════════════════════════════════════
 setInterval(() => { cleanData(); updateStats(); }, 10_000);
+
+// Evict stale newsCache entries older than NEWS_CACHE_TTL
+setInterval(() => {
+  const now = Date.now();
+  for (const sym of Object.keys(newsCache)) {
+    if (now - newsCache[sym].ts > NEWS_CACHE_TTL) delete newsCache[sym];
+  }
+}, 60_000);
 setInterval(updateStats, 1_000);
-setInterval(refreshSummary, 5_000);
+// 30s fallback refresh handles alert TTL expiry when no new batches arrive;
+// active trading is covered by the 2s debounce in ws.onmessage
+setInterval(refreshSummary, 30_000);
 
 // Silently refresh minute bars every 5 min to pick up any gaps
 setInterval(() => {
@@ -989,6 +2155,9 @@ setInterval(() => {
     .then(d => { chartBars = d.bars || []; rebuildMinuteChart(); })
     .catch(() => {});
 }, 5 * 60_000);
+
+// Refresh alert history every 10s — always, so it's ready when user switches to tab
+setInterval(fetchAlertHistory, 10_000);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // VOICE ALERTS
@@ -1035,25 +2204,7 @@ document.getElementById('ctrlCooldown').addEventListener('input', e => {
   SPEAK_COOLDOWN = (parseFloat(e.target.value) || 120) * 1000;
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// THRESHOLD CONTROLS
-// ══════════════════════════════════════════════════════════════════════════════
-function updateThreshLabel() {
-  const vK = VALUE_THRESHOLD >= 1_000_000
-    ? (VALUE_THRESHOLD / 1_000_000).toFixed(1) + 'M'
-    : (VALUE_THRESHOLD / 1_000).toFixed(0) + 'K';
-  document.getElementById('sAlertThresh').textContent = `${DELTA_THRESHOLD}%·$${vK}`;
-}
 
-document.getElementById('ctrlDelta').addEventListener('input', e => {
-  const v = parseFloat(e.target.value);
-  if (!isNaN(v) && v > 0) { DELTA_THRESHOLD = v; updateThreshLabel(); refreshSummary(); }
-});
-
-document.getElementById('ctrlVal').addEventListener('input', e => {
-  const v = parseFloat(e.target.value);
-  if (!isNaN(v) && v > 0) { VALUE_THRESHOLD = v * 1_000; updateThreshLabel(); refreshSummary(); }
-});
 </script>
 </body>
 </html>

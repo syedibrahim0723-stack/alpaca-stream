@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Alpaca Stream — Data & Logic Flow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 32px 24px;
+      min-height: 100vh;
+    }
+    h1 { font-size: 18px; color: #58a6ff; margin-bottom: 6px; letter-spacing: -.3px; }
+    .subtitle { font-size: 11px; color: #8b949e; margin-bottom: 32px; }
+
+    /* ── SWIMLANE GRID ── */
+    .lanes {
+      display: grid;
+      grid-template-columns: 160px 1fr 1fr 1fr 1fr;
+      gap: 0;
+      min-width: 900px;
+    }
+    .lane-hdr {
+      padding: 8px 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 6px 6px 0 0;
+      text-align: center;
+    }
+    .lane-body {
+      padding: 12px 8px;
+      border-right: 1px solid #21262d;
+      min-height: 640px;
+      position: relative;
+    }
+    .lane-body:last-child { border-right: none; }
+
+    /* lane colours */
+    .l-alpaca  .lane-hdr { background: rgba(88,166,255,.15);  color: #58a6ff; }
+    .l-backend .lane-hdr { background: rgba(63,185,80,.12);   color: #3fb950; }
+    .l-xai     .lane-hdr { background: rgba(188,140,255,.12); color: #bc8cff; }
+    .l-ui      .lane-hdr { background: rgba(210,153,34,.12);  color: #d29922; }
+    .l-pulszy  .lane-hdr { background: rgba(29,155,240,.12);  color: #1d9bf0; }
+
+    /* ── BOXES ── */
+    .box {
+      border-radius: 7px;
+      padding: 9px 11px;
+      font-size: 11px;
+      line-height: 1.45;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .box .label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 4px;
+      opacity: .75;
+    }
+    .box .title { font-weight: 700; font-size: 12px; margin-bottom: 3px; }
+    .box .desc  { font-size: 10px; color: #8b949e; }
+    .box code   { font-family: 'Courier New', monospace; font-size: 10px;
+                  background: rgba(255,255,255,.06); padding: 1px 4px; border-radius: 3px; }
+
+    /* box themes */
+    .b-blue   { background: rgba(88,166,255,.1);  border: 1px solid rgba(88,166,255,.3);  }
+    .b-green  { background: rgba(63,185,80,.1);   border: 1px solid rgba(63,185,80,.3);   }
+    .b-purple { background: rgba(188,140,255,.1); border: 1px solid rgba(188,140,255,.3); }
+    .b-yellow { background: rgba(210,153,34,.1);  border: 1px solid rgba(210,153,34,.3);  }
+    .b-orange { background: rgba(219,109,40,.1);  border: 1px solid rgba(219,109,40,.3);  }
+    .b-teal   { background: rgba(57,211,83,.1);   border: 1px solid rgba(57,211,83,.3);   }
+    .b-red    { background: rgba(248,81,73,.1);   border: 1px solid rgba(248,81,73,.3);   }
+    .b-twitter{ background: rgba(29,155,240,.1);  border: 1px solid rgba(29,155,240,.3);  }
+    .b-dim    { background: rgba(48,54,61,.3);    border: 1px solid #30363d;               }
+
+    /* ── ARROWS between lanes (SVG overlay) ── */
+    .flow-svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    /* ── SECTION DIVIDERS ── */
+    .section-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #30363d;
+      padding: 4px 0 6px;
+      border-top: 1px solid #21262d;
+      margin: 14px 0 8px;
+    }
+
+    /* ── LEGEND ── */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 16px;
+      margin-top: 28px;
+      padding-top: 16px;
+      border-top: 1px solid #21262d;
+    }
+    .leg-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #8b949e; }
+    .leg-dot  { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* ── FLOW NUMBERS ── */
+    .step {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 18px; height: 18px; border-radius: 50%;
+      font-size: 9px; font-weight: 800;
+      margin-right: 5px; flex-shrink: 0;
+    }
+    .s-blue   { background: rgba(88,166,255,.25);  color: #58a6ff; }
+    .s-green  { background: rgba(63,185,80,.25);   color: #3fb950; }
+    .s-purple { background: rgba(188,140,255,.25); color: #bc8cff; }
+    .s-yellow { background: rgba(210,153,34,.25);  color: #d29922; }
+    .s-twitter{ background: rgba(29,155,240,.25);  color: #1d9bf0; }
+
+    .arrow-row {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10px; color: #8b949e; margin: 6px 0;
+      padding: 4px 8px;
+      background: rgba(255,255,255,.02);
+      border-radius: 4px;
+    }
+    .arrow-row .arr { color: #30363d; font-size: 14px; }
+
+    /* ── FULL FLOW DIAGRAM ── */
+    .flow-diagram {
+      position: relative;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+
+<h1>⚡ Alpaca Live Stream — Data & Logic Flow</h1>
+<p class="subtitle">End-to-end architecture: trade ingestion → alerts → X sentiment → Pulszy push</p>
+
+<div class="flow-diagram">
+  <div class="lanes">
+
+    <!-- ── COL 0: LABEL ── -->
+    <div>
+      <div class="lane-hdr" style="background:transparent;color:#30363d;font-size:9px;">Phase</div>
+      <div class="lane-body" style="border-right:1px solid #21262d;padding-top:16px;">
+
+        <div style="font-size:9px;color:#8b949e;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:52px;">
+          ① Trade<br>Ingest
+        </div>
+        <div style="font-size:9px;color:#8b949e;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:76px;">
+          ② Alert<br>Detection
+        </div>
+        <div style="font-size:9px;color:#8b949e;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:60px;">
+          ③ Chart<br>& News
+        </div>
+        <div style="font-size:9px;color:#8b949e;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:80px;">
+          ④ X / Twitter<br>Sentiment
+        </div>
+        <div style="font-size:9px;color:#8b949e;font-weight:700;text-transform:uppercase;letter-spacing:.8px;">
+          ⑤ Pulszy<br>Push
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COL 1: ALPACA (External) ── -->
+    <div class="l-alpaca">
+      <div class="lane-hdr">🔵 Alpaca / External</div>
+      <div class="lane-body">
+
+        <div class="box b-blue">
+          <div class="label">Live Stream</div>
+          <div class="title">StockDataStream (SIP)</div>
+          <div class="desc">All US equities tick-by-tick<br><code>subscribe_trades("*")</code></div>
+        </div>
+
+        <div class="box b-blue">
+          <div class="label">Live Stream</div>
+          <div class="title">NewsDataStream</div>
+          <div class="desc">Real-time news articles<br><code>subscribe_news("*")</code></div>
+        </div>
+
+        <div style="margin-top:120px;">
+          <div class="box b-dim">
+            <div class="label">REST</div>
+            <div class="title">Historical Bars API</div>
+            <div class="desc"><code>GET /bars/{sym}</code><br>1-min OHLCV from 4 AM ET</div>
+          </div>
+
+          <div class="box b-dim">
+            <div class="label">REST</div>
+            <div class="title">News History API</div>
+            <div class="desc"><code>GET /news/{sym}</code><br>7-day article history</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── COL 2: BACKEND ── -->
+    <div class="l-backend">
+      <div class="lane-hdr">🟢 FastAPI Backend</div>
+      <div class="lane-body">
+
+        <div class="box b-green">
+          <div class="label">Thread</div>
+          <div class="title">run_trade_stream()</div>
+          <div class="desc">Daemon thread — pushes ticks<br>onto <code>trade_queue</code></div>
+        </div>
+
+        <div class="box b-green">
+          <div class="label">Async Task</div>
+          <div class="title">queue_processor()</div>
+          <div class="desc">Drains queue every 20 ms<br>→ <code>trades_store</code> + broadcast<br>→ <code>minute_bars</code> aggregation</div>
+        </div>
+
+        <div class="box b-teal">
+          <div class="label">Alert Log</div>
+          <div class="title">POST /log/alert</div>
+          <div class="desc">Appends to <code>alerts_log.jsonl</code><br>only when alert fires</div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <div class="box b-green">
+            <div class="label">REST Endpoint</div>
+            <div class="title">GET /bars/{sym}</div>
+            <div class="desc">Merges historical + live bars</div>
+          </div>
+          <div class="box b-green">
+            <div class="label">REST Endpoint</div>
+            <div class="title">GET /news/{sym}</div>
+            <div class="desc">Merges REST history + live cache</div>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <div class="box b-purple">
+            <div class="label">REST Endpoint</div>
+            <div class="title">GET /twitter/{sym}</div>
+            <div class="desc">Calls xAI → caches result<br>→ fires Pulszy push thread</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── COL 3: BROWSER UI ── -->
+    <div class="l-ui">
+      <div class="lane-hdr">🟡 Browser Dashboard</div>
+      <div class="lane-body">
+
+        <div class="box b-yellow">
+          <div class="label">WebSocket</div>
+          <div class="title">WS /ws  (live feed)</div>
+          <div class="desc">Receives trade batches every 20 ms<br>Auto-reconnects on drop</div>
+        </div>
+
+        <div class="box b-yellow">
+          <div class="label">Alert Engine (JS)</div>
+          <div class="title">computeSummary() every 5s</div>
+          <div class="desc">
+            VWAP 1m vs 2m per symbol<br>
+            Fires alert when <code>|Δ%| ≥ threshold</code><br>
+            + <code>$value ≥ threshold</code> + ≥5 trades<br>
+            → Bull / Bear panel<br>
+            → Voice announcement<br>
+            → <code>POST /log/alert</code>
+          </div>
+        </div>
+
+        <div style="margin-top:6px;">
+          <div class="box b-yellow">
+            <div class="label">On ticker click</div>
+            <div class="title">loadBarsAndNews(sym)</div>
+            <div class="desc">Fetches bars → renders chart<br>Fetches news → renders panel</div>
+          </div>
+        </div>
+
+        <div style="margin-top:6px;">
+          <div class="box b-twitter">
+            <div class="label">User Action</div>
+            <div class="title">🐦 Fetch X Posts button</div>
+            <div class="desc">
+              Manual trigger only<br>
+              Calls <code>GET /twitter/{sym}</code><br>
+              Shows loading state<br>
+              Injects card into news panel<br>
+              Polls 60s if news loads first
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── COL 4: PULSZY + xAI ── -->
+    <div class="l-pulszy">
+      <div class="lane-hdr">🐦 xAI + Pulszy</div>
+      <div class="lane-body">
+
+        <div style="margin-top:200px;">
+          <div class="box b-purple">
+            <div class="label">xAI Grok</div>
+            <div class="title">x_search tool</div>
+            <div class="desc">
+              Searches X in real-time<br>
+              Returns 5 latest posts<br>
+              sorted newest → oldest<br>
+              anchored to current ET time
+            </div>
+          </div>
+
+          <div class="box b-purple">
+            <div class="label">xAI Grok</div>
+            <div class="title">Summarize tweets</div>
+            <div class="desc">
+              2-3 sentence trading insight<br>
+              Sentiment: bullish/bearish/mixed<br>
+              Catalysts + price targets
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="box b-twitter">
+            <div class="label">Pulszy API</div>
+            <div class="title">POST /auth/refresh</div>
+            <div class="desc">
+              Google SSO via refresh token cookie<br>
+              JWT cached, refreshed auto on expiry
+            </div>
+          </div>
+
+          <div class="box b-twitter">
+            <div class="label">Pulszy API</div>
+            <div class="title">POST /news</div>
+            <div class="desc">
+              Publishes X sentiment as article<br>
+              <code>source: PULSZY</code><br>
+              tags: <code>x-sentiment, twitter</code><br>
+              Runs in background thread<br>
+              Non-blocking — no UI delay
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /lanes -->
+
+  <!-- ── FLOW ARROWS (text-based, below grid) ── -->
+  <div style="margin-top:24px;padding-top:16px;border-top:1px solid #21262d;">
+    <div style="font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Data Flow — Step by Step</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+
+      <div class="arrow-row"><span class="step s-blue">1</span><b style="color:#58a6ff">Alpaca SIP</b><span class="arr">→</span>trade tick<span class="arr">→</span><b style="color:#3fb950">trade_queue</b><span class="arr">→</span>broadcast WS<span class="arr">→</span><b style="color:#d29922">Browser</b></div>
+
+      <div class="arrow-row"><span class="step s-blue">2</span><b style="color:#58a6ff">Alpaca News</b><span class="arr">→</span>article<span class="arr">→</span><b style="color:#3fb950">news_queue</b><span class="arr">→</span>broadcast WS<span class="arr">→</span><b style="color:#d29922">Browser</b></div>
+
+      <div class="arrow-row"><span class="step s-green">3</span><b style="color:#d29922">Browser</b> computes VWAP 1m vs 2m every 5s<span class="arr">→</span>Δ% exceeds threshold<span class="arr">→</span>Alert fires</div>
+
+      <div class="arrow-row"><span class="step s-green">4</span>Alert fires<span class="arr">→</span><b style="color:#d29922">POST /log/alert</b><span class="arr">→</span><b style="color:#3fb950">alerts_log.jsonl</b> (disk, persists)</div>
+
+      <div class="arrow-row"><span class="step s-green">5</span>User clicks ticker<span class="arr">→</span><b style="color:#d29922">GET /bars/{sym}</b><span class="arr">→</span>historical + live merged<span class="arr">→</span>Chart rendered</div>
+
+      <div class="arrow-row"><span class="step s-green">6</span>User clicks ticker<span class="arr">→</span><b style="color:#d29922">GET /news/{sym}</b><span class="arr">→</span>7-day history + live cache<span class="arr">→</span>News panel</div>
+
+      <div class="arrow-row"><span class="step s-purple">7</span>User clicks <b style="color:#1d9bf0">🐦 Fetch X Posts</b><span class="arr">→</span><b style="color:#3fb950">GET /twitter/{sym}</b><span class="arr">→</span>xAI x_search (last 2h)</div>
+
+      <div class="arrow-row"><span class="step s-purple">8</span>xAI returns tweets<span class="arr">→</span>summarize()<span class="arr">→</span>cache<span class="arr">→</span><b style="color:#d29922">Twitter card injected</b> in news panel</div>
+
+      <div class="arrow-row"><span class="step s-twitter">9</span>Background thread<span class="arr">→</span><b style="color:#1d9bf0">POST /auth/refresh</b> (JWT via cookie)<span class="arr">→</span>access token cached</div>
+
+      <div class="arrow-row"><span class="step s-twitter">10</span>Background thread<span class="arr">→</span><b style="color:#1d9bf0">POST /news</b><span class="arr">→</span>article published in Pulszy (source: PULSZY)</div>
+
+    </div>
+  </div>
+
+  <!-- ── KEY DESIGN DECISIONS ── -->
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid #21262d;">
+    <div style="font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Key Design Decisions</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:10px;">
+
+      <div style="background:rgba(255,255,255,.03);border:1px solid #21262d;border-radius:6px;padding:10px;">
+        <div style="color:#3fb950;font-weight:700;margin-bottom:4px;">🔒 Per-client WS Lock</div>
+        <div style="color:#8b949e;">broadcast() and per-client ping share an asyncio.Lock to prevent concurrent write crashes (Windows ProactorEventLoop fix)</div>
+      </div>
+
+      <div style="background:rgba(255,255,255,.03);border:1px solid #21262d;border-radius:6px;padding:10px;">
+        <div style="color:#d29922;font-weight:700;margin-bottom:4px;">📋 Alerts Only Logging</div>
+        <div style="color:#8b949e;">Only alert events are written to disk — not every trade. Log tagged "new" or "escalation" (delta grew 1.5× + 2× threshold)</div>
+      </div>
+
+      <div style="background:rgba(255,255,255,.03);border:1px solid #21262d;border-radius:6px;padding:10px;">
+        <div style="color:#1d9bf0;font-weight:700;margin-bottom:4px;">🐦 Twitter On-Demand</div>
+        <div style="color:#8b949e;">X fetch is manual (button) not automatic — avoids wasting xAI API calls. Cache is 30 min; force-refresh always clears it</div>
+      </div>
+
+      <div style="background:rgba(255,255,255,.03);border:1px solid #21262d;border-radius:6px;padding:10px;">
+        <div style="color:#bc8cff;font-weight:700;margin-bottom:4px;">⚡ Non-blocking Push</div>
+        <div style="color:#8b949e;">Pulszy push runs in a daemon thread — the /twitter response returns to the browser immediately without waiting for Pulszy</div>
+      </div>
+
+      <div style="background:rgba(255,255,255,.03);border:1px solid #21262d;border-radius:6px;padding:10px;">
+        <div style="color:#3fb950;font-weight:700;margin-bottom:4px;">🔄 JWT Auto-refresh</div>
+        <div style="color:#8b949e;">Pulszy token cached in-memory with 30s expiry buffer. On expiry, re-runs /auth/refresh with the cookie from .env automatically</div>
+      </div>
+
+      <div style="background:rgba(255,255,255,.03);border:1px solid #21262d;border-radius:6px;padding:10px;">
+        <div style="color:#d29922;font-weight:700;margin-bottom:4px;">🕐 Latest Tweets Anchor</div>
+        <div style="color:#8b949e;">Current ET time injected into xAI prompt — Grok searches last 2h first, expands to 24h only if fewer than 3 posts found</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /flow-diagram -->
+
+</body>
+</html>

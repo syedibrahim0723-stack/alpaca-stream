@@ -26,3 +26,16 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Runtime data — generated at startup, not source code
+alerts.db
+alerts_log.jsonl
+etf_tickers.json
+yf_marketcap_cache.json
+yesterday_volume.json
+
+# Large data files — run ticker_universe.py to regenerate
+stock_universe_full.csv
+
+# Claude Code internal
+.claude/
