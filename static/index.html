@@ -55,6 +55,37 @@
     #status.disconnected { background: rgba(248,81,73,.12);  color: var(--red);   }
     #status.connecting   { background: rgba(88,166,255,.12); color: var(--blue);  }
 
+    /* ── Breaking news ticker ───────────────────────────────────────────── */
+    #newsTicker {
+      display: flex; align-items: center; flex-shrink: 0;
+      height: 28px; overflow: hidden;
+      background: #0f1923; border-bottom: 1px solid rgba(210,153,34,.3);
+    }
+    #newsTicker.hidden { display: none; }
+    .ticker-label {
+      flex-shrink: 0; padding: 0 12px;
+      font-size: 10px; font-weight: 800; letter-spacing: 1px;
+      color: #0d1117; background: var(--yellow);
+      height: 100%; display: flex; align-items: center; white-space: nowrap;
+    }
+    .ticker-body { flex: 1; overflow: hidden; position: relative; height: 100%; }
+    .ticker-text {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 100%; text-align: center;
+      font-size: 11.5px; font-weight: 500; color: #e8d48a;
+      letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      opacity: 0; transition: opacity 0.6s ease;
+    }
+    .ticker-text.visible { opacity: 1; }
+    .ticker-dots {
+      flex-shrink: 0; display: flex; gap: 4px; padding: 0 12px; align-items: center;
+    }
+    .ticker-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(210,153,34,.3); transition: background .3s;
+    }
+    .ticker-dot.active { background: var(--yellow); }
+
     /* ── Stats bar ──────────────────────────────────────────────────────── */
     .stats-bar { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); }
     .stat { flex: 1; padding: 7px 16px; text-align: center; border-right: 1px solid var(--border); }
@@ -120,7 +151,28 @@
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
     /* ── Col 1: Alerts + Summary ─────────────────────────────────────────── */
-    .col-summary { width: 560px; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .col-summary { flex: 1; min-width: 320px; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Col 2: Sweep alerts ─────────────────────────────────────────────── */
+    .col-sweeps { width: 240px; flex-shrink: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .sweep-wrap { flex: 1; overflow-y: auto; }
+    .sweep-wrap::-webkit-scrollbar { width: 3px; }
+    .sweep-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+    .sweep-row { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-bottom: 1px solid rgba(48,54,61,.6); cursor: pointer; transition: background .15s; }
+    .sweep-row:hover { background: rgba(255,255,255,.04); }
+    .sweep-row.voice-alert { border-left: 2px solid var(--yellow); }
+    .sweep-top { display: flex; align-items: center; gap: 5px; }
+    .sweep-sym { font-size: 11px; font-weight: 800; color: var(--blue); letter-spacing: .3px; }
+    .sweep-val { font-size: 11px; font-weight: 700; color: var(--green); margin-left: auto; }
+    .sweep-voice-badge { font-size: 9px; }
+    .sweep-bot { display: flex; gap: 6px; align-items: center; }
+    .sweep-tier { font-size: 9px; padding: 1px 5px; border-radius: 8px; font-weight: 700; letter-spacing: .3px; }
+    .sweep-price { font-size: 9px; color: var(--dim); }
+    .sweep-ts    { font-size: 9px; color: var(--dim); margin-left: auto; }
+    .sweep-empty { font-size: 10px; color: var(--dim); font-style: italic; padding: 16px 10px; text-align: center; }
+    .sweep-count { font-size: 9px; padding: 1px 6px; border-radius: 8px; background: rgba(88,166,255,.15); color: var(--blue); font-weight: 700; }
+
+    /* ── Col 3: Chart + News ─────────────────────────────────────────────── */
 
     /* Split alerts */
     .alerts-split { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); max-height: 44%; min-height: 120px; }
@@ -185,7 +237,7 @@
     #sumTable td.sym { color: var(--blue); font-weight: 700; font-size: 12px; }
 
     /* ── Col 2: Chart + News ─────────────────────────────────────────────── */
-    .col-chart { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .col-chart { width: 40%; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; min-width: 280px; }
 
     .chart-controls {
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -298,8 +350,11 @@
     #histTable tbody tr { cursor: default; }
     #histTable td { font-family: 'Courier New', monospace; font-size: 10.5px; padding: 3px 9px; white-space: nowrap; }
     #histTable td.ht-sym  { color: var(--blue); font-weight: 700; }
-    #histTable td.ht-bull { color: var(--green); font-weight: 700; }
-    #histTable td.ht-bear { color: var(--red);   font-weight: 700; }
+    #histTable td.ht-sym:hover { text-decoration: underline; color: var(--text); }
+    #histTable td.ht-bull { color: var(--green);  font-weight: 700; }
+    #histTable td.ht-bear { color: var(--red);    font-weight: 700; }
+    #histTable td.ht-vol   { color: var(--yellow); font-weight: 700; }
+    #histTable td.ht-sweep { color: var(--purple); font-weight: 700; }
     #histTable td.ht-tag  { font-size: 8px; color: var(--dim); }
     #histTable td.r       { text-align: right; }
     .hist-empty { padding: 14px 12px; font-size: 11px; color: var(--dim); font-style: italic; }
@@ -368,6 +423,16 @@
     .alert-row.flash-alert .ar-sym { color: #ffd700 !important; }
     .alert-row.flash-alert .ar-val { color: #ffd700 !important; font-weight: 700; }
     .flash-bolt { font-size: 11px; vertical-align: middle; }
+
+    /* ── Stock tag chips ──────────────────────────────────────────────────── */
+    .tag-chip {
+      display: inline-block; padding: 1px 7px; border-radius: 10px;
+      font-size: 9.5px; font-weight: 700; letter-spacing: .3px;
+      border: 1px solid; white-space: nowrap;
+    }
+    .tag-country  { color: #58a6ff; border-color: rgba(88,166,255,.35); background: rgba(88,166,255,.08); }
+    .tag-industry { color: #bc8cff; border-color: rgba(188,140,255,.35); background: rgba(188,140,255,.08); }
+    .tag-attr     { color: #3fb950; border-color: rgba(63,185,80,.35);  background: rgba(63,185,80,.08);  }
 
     /* ── Settings modal overlay ──────────────────────────────────────────── */
     #settingsOverlay {
@@ -571,6 +636,39 @@
         </div>
       </div>
 
+      <!-- SWEEP DETECTION -->
+      <div class="sm-section">
+        <div class="sm-section-title">⚡ Sweep Detection (ISO · condition F)</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim);cursor:pointer">
+            <input type="checkbox" id="smSweepEnabled"> Enable sweep alerts
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim);cursor:pointer">
+            <input type="checkbox" id="smSweepVoice"> Enable voice alerts
+          </label>
+          <button onclick="testVoice()" style="font-size:9px;padding:2px 8px;border-radius:5px;border:1px solid var(--border);background:none;color:var(--dim);cursor:pointer">🔊 Test Voice</button>
+        </div>
+        <div style="font-size:9px;color:var(--dim);margin-bottom:4px">Blackout minutes ET (comma-separated — e.g. 9:30,9:31,9:32,15:58,15:59,16:00):</div>
+        <input id="smSweepBlackout" type="text" class="set-in" style="width:100%;margin-bottom:10px" placeholder="9:30,9:31,9:32,15:58,15:59,16:00">
+        <div style="font-size:9px;color:var(--dim);margin-bottom:6px">Dollar thresholds per cap tier (in $K). Direct = show alert · Voice = also speak aloud.</div>
+        <table style="width:100%;border-collapse:collapse;font-size:9.5px">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:4px 6px;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border)">Tier</th>
+              <th style="text-align:right;padding:4px 6px;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border)">Direct ($K)</th>
+              <th style="text-align:right;padding:4px 6px;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border)">Voice ($K)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:3px 6px;color:#e86060">🔴 Nano</td>  <td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwNanoDirect"  type="number" min="1" step="10" style="width:60px"></td><td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwNanoVoice"  type="number" min="1" step="10" style="width:60px"></td></tr>
+            <tr><td style="padding:3px 6px;color:#e8a060">🟠 Small</td> <td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwSmallDirect" type="number" min="1" step="10" style="width:60px"></td><td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwSmallVoice" type="number" min="1" step="10" style="width:60px"></td></tr>
+            <tr><td style="padding:3px 6px;color:#60a0e8">🔵 Mid</td>   <td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwMidDirect"   type="number" min="1" step="25" style="width:60px"></td><td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwMidVoice"   type="number" min="1" step="25" style="width:60px"></td></tr>
+            <tr><td style="padding:3px 6px;color:#a060e8">🟣 Big</td>   <td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwBigDirect"   type="number" min="1" step="50" style="width:60px"></td><td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwBigVoice"   type="number" min="1" step="50" style="width:60px"></td></tr>
+            <tr><td style="padding:3px 6px;color:#888">⬜ Other</td>    <td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwOtherDirect" type="number" min="1" step="10" style="width:60px"></td><td style="text-align:right;padding:3px 6px"><input class="set-in" id="smSwOtherVoice" type="number" min="1" step="10" style="width:60px"></td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <div class="sm-actions">
         <button class="sm-save-btn"  onclick="saveSettings()">✓ Save &amp; Apply</button>
         <button class="sm-reset-btn" onclick="resetSettings()">↺ Reset Defaults</button>
@@ -584,9 +682,21 @@
   <!-- Header -->
   <header>
     <div class="logo">⚡ <span>Live Trading</span></div>
-    <button id="settingsBtn" onclick="openSettings()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--dim);border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;letter-spacing:.03em" title="Settings">⚙️ Settings</button>
+    <a href="/static/dashboard_data_flow.xlsx" download="dashboard_data_flow.xlsx"
+       style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--dim);border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;letter-spacing:.03em;text-decoration:none;display:flex;align-items:center;gap:5px"
+       title="Download Data Flow & Calculations (Excel)">📊 Data Flow</a>
+    <button id="settingsBtn" onclick="openSettings()" style="background:none;border:1px solid var(--border);color:var(--dim);border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;letter-spacing:.03em" title="Settings">⚙️ Settings</button>
     <div id="status" class="connecting">● CONNECTING</div>
   </header>
+
+  <!-- Breaking news ticker -->
+  <div id="newsTicker" style="display:none">
+    <div class="ticker-label">📢 BREAKING</div>
+    <div class="ticker-body">
+      <div class="ticker-text" id="tickerText" style="opacity:1"></div>
+    </div>
+    <div class="ticker-dots" id="tickerDots"></div>
+  </div>
 
   <!-- Stats bar -->
   <div class="stats-bar">
@@ -744,6 +854,12 @@
 
         <!-- Alert history pane -->
         <div id="paneHist" class="tab-pane hidden">
+          <div id="histFilterBar" style="display:none;padding:4px 10px;background:rgba(88,166,255,.08);border-bottom:1px solid var(--border);align-items:center;gap:7px;font-size:10px;flex-shrink:0">
+            <span style="color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-size:9px">Filtered</span>
+            <span id="histFilterLabel" style="color:var(--blue);font-weight:800;font-size:11px"></span>
+            <span style="color:var(--dim);font-size:9px">— click any row sym to switch · </span>
+            <button onclick="clearHistFilter()" style="background:none;border:1px solid var(--border);color:var(--dim);border-radius:4px;padding:1px 8px;cursor:pointer;font-size:9px;transition:color .15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--dim)'">✕ Clear</button>
+          </div>
           <div class="hist-wrap">
             <table id="histTable">
               <thead><tr>
@@ -752,7 +868,7 @@
                 <th class="r">Dir</th>
                 <th class="r">Δ%</th>
                 <th class="r">$ Val</th>
-                <th class="r">Trades</th>
+                <th class="r">Avg $ · Vol</th>
                 <th class="ht-tag">Tag</th>
               </tr></thead>
               <tbody id="histBody">
@@ -765,7 +881,22 @@
       </div>
     </div>
 
-    <!-- ── Col 2: Chart (top 55%) + News (bottom 45%) ─────────────────── -->
+    <!-- ── Col 2: Sweep Alerts ──────────────────────────────────────────── -->
+    <div class="col col-sweeps">
+      <div class="panel-hdr">
+        <span class="dot-live"></span>
+        ⚡ SWEEPS
+        <span class="sweep-count" id="sweepCount">0</span>
+        <label style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:9px;cursor:pointer;color:var(--dim)" title="Voice alerts">
+          <input type="checkbox" id="sweepVoiceQuick" onchange="onVoiceQuickToggle(this.checked)"> 🔊
+        </label>
+      </div>
+      <div class="sweep-wrap" id="sweepWrap">
+        <div class="sweep-empty">Watching for ISO sweeps…</div>
+      </div>
+    </div>
+
+    <!-- ── Col 3: Chart (top 55%) + News (bottom 45%) ────────────────── -->
     <div class="col col-chart">
 
       <!-- Chart controls -->
@@ -776,6 +907,20 @@
         <div class="price-badge" id="priceBadge"></div>
         <div class="win-badge" id="winBadge">Today</div>
       </div>
+      <!-- Stock tags panel -->
+      <div id="stockTagsBar" style="display:none; flex-shrink:0; padding:5px 14px; background:var(--card2); border-bottom:1px solid var(--border); gap:6px; flex-wrap:wrap; align-items:center;">
+        <span id="tagBarSym" style="font-size:10px;font-weight:800;color:var(--blue);letter-spacing:.5px;margin-right:4px"></span>
+        <span id="tagBarCountry" style="display:none"></span>
+        <span id="tagBarIndustry" style="display:none"></span>
+        <span id="tagBarTags"></span>
+        <button id="tagsRefreshBtn" onclick="refreshTags()" title="Re-sync tags from Google Sheet"
+          style="margin-left:auto; font-size:10px; padding:2px 8px; border-radius:5px;
+                 border:1px solid rgba(88,166,255,.3); background:rgba(88,166,255,.08);
+                 color:var(--blue); cursor:pointer; display:flex; align-items:center; gap:4px;">
+          🔄 Sync
+        </button>
+      </div>
+
       <div class="chart-wrap">
         <canvas id="priceChart"></canvas>
       </div>
@@ -846,7 +991,8 @@ const chart = new Chart(chartCtx, {
 // STATE
 // ══════════════════════════════════════════════════════════════════════════════
 const symbolData   = new Map();   // sym → [{x,y,sz}]  5-min raw ticks
-const lastPrice    = new Map();   // sym → last price
+const lastPrice      = new Map();   // sym → last price (all ticks)
+const lastNonFPrice  = new Map();   // sym → last price from NON-ISO ticks (pre-sweep reference)
 const allSyms      = new Set();
 const alertHistory   = new Map();   // sym → {row, firstTs, lastTs}
 // Vol spike persistence — survives one refresh cycle (5-min TTL)
@@ -913,6 +1059,40 @@ let symMeta = {};
 
 // ── Yesterday's top-50 by dollar volume — shown with 🔥 badge ──────────────
 let yesterdayTop = new Set();
+
+// ── Stock tags (loaded once from /tags) ────────────────────────────────────
+let stockTags = {};   // sym → {market_cap, industry, country, tags:[]}
+
+// ── Sweep config ──────────────────────────────────────────────────────────────
+const DEFAULT_SWEEP_CONFIG = {
+  enabled:  true,
+  voice:    true,
+  blackout: ['9:30','9:31','9:32','15:58','15:59','16:00'],
+  thresholds: {
+    nano:    { direct: 10,  voice: 50   },   // $K
+    small:   { direct: 25,  voice: 100  },
+    mid:     { direct: 75,  voice: 250  },
+    big:     { direct: 150, voice: 500  },
+    unknown: { direct: 10,  voice: 50   },
+  },
+};
+let sweepConfig = (() => {
+  try {
+    const s = JSON.parse(localStorage.getItem('sweepConfig'));
+    if (!s) return JSON.parse(JSON.stringify(DEFAULT_SWEEP_CONFIG));
+    // migration safety — fill missing keys
+    if (!s.thresholds) s.thresholds = JSON.parse(JSON.stringify(DEFAULT_SWEEP_CONFIG.thresholds));
+    for (const k of Object.keys(DEFAULT_SWEEP_CONFIG.thresholds)) {
+      if (!s.thresholds[k]) s.thresholds[k] = { ...DEFAULT_SWEEP_CONFIG.thresholds[k] };
+    }
+    if (!Array.isArray(s.blackout)) s.blackout = [...DEFAULT_SWEEP_CONFIG.blackout];
+    return s;
+  } catch { return JSON.parse(JSON.stringify(DEFAULT_SWEEP_CONFIG)); }
+})();
+let sweepAlerts = (() => {
+  try { return JSON.parse(sessionStorage.getItem('sweepAlerts') || '[]'); }
+  catch { return []; }
+})();
 
 let _chartDirty = false;   // set true when live bar mutated; flushed once per batch
 let totalTicks  = 0;       // running count of points across all symbolData arrays
@@ -1266,6 +1446,7 @@ function saveSettings() {
   tierConfig.big.maxCapM   = bigMaxM;
 
   localStorage.setItem('tierConfig2', JSON.stringify(tierConfig));
+  saveSweepSettings();
   refreshSummary();
 
   const btn = document.querySelector('.sm-save-btn');
@@ -1277,13 +1458,17 @@ function resetSettings() {
   tierConfig = JSON.parse(JSON.stringify(DEFAULT_TIER_CONFIG));
   localStorage.removeItem('tierConfig2');
   localStorage.removeItem('tierConfig');
+  sweepConfig = JSON.parse(JSON.stringify(DEFAULT_SWEEP_CONFIG));
+  localStorage.removeItem('sweepConfig');
   loadSettingsUI();
+  loadSweepSettingsUI();
   refreshSummary();
 }
 
 // ── SETTINGS MODAL ────────────────────────────────────────────────────────────
 function openSettings() {
   loadSettingsUI();
+  loadSweepSettingsUI();
   renderSuppressedList();
   document.getElementById('settingsOverlay').classList.add('open');
 }
@@ -1436,6 +1621,7 @@ function computeVolumeSummary() {
     const cached = volSpikeCache.get(r.sym);
     if (!cached) {
       volSpikeCache.set(r.sym, { row: r, firstTs: now2, lastTs: now2 });
+      logVolSpike(r, 'vol_spike');
     } else {
       volSpikeCache.set(r.sym, { row: r, firstTs: cached.firstTs, lastTs: now2 });
     }
@@ -1444,6 +1630,7 @@ function computeVolumeSummary() {
     const cached = volSpikeCache.get(r.sym);
     if (!cached) {
       volSpikeCache.set(r.sym, { row: r, firstTs: now2, lastTs: now2, _newAct: true });
+      logVolSpike(r, 'new_activity');
     } else {
       volSpikeCache.set(r.sym, { ...cached, row: r, lastTs: now2 });
     }
@@ -1508,7 +1695,7 @@ function _volRow(r) {
   const volStyle = isFlash ? 'color:#ffd700;font-weight:700' : 'color:var(--teal)';
 
   tr.innerHTML =
-    `<td class="vol-sym" onclick="selectSym('${esc(r.sym)}',true);loadNews('${esc(r.sym)}')">${esc(r.sym)}${bolt}${fire}${tierBadge}</td>` +
+    `<td class="vol-sym" onclick="selectSym('${esc(r.sym)}',true);loadNews('${esc(r.sym)}');updateTagsBar('${esc(r.sym)}')">${esc(r.sym)}${bolt}${fire}${tierBadge}</td>` +
     `<td class="r" style="${volStyle}">${fmtVal(r.vol1m)}</td>` +
     `<td class="r" style="color:var(--dim)">${r.basePerMin > 0 ? fmtVal(r.basePerMin) : '—'}</td>` +
     `<td class="r vol-spike">${esc(spikeStr)}</td>` +
@@ -1680,6 +1867,7 @@ function selectSym(sym, fromUser = false) {
   selectedSym = sym;
   symSel.value = sym;
   loadBars(sym);
+  updateTagsBar(sym);
   if (fromUser) loadNews(sym);
 }
 
@@ -1730,6 +1918,28 @@ function logAlert(r, tag = 'new') {
     }
   })
   .catch(err => console.warn('[logAlert] fetch error:', err));
+}
+
+function logVolSpike(r, tag = 'vol_spike') {
+  fetch('/log/alert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tag,
+      type:      'vol',
+      sym:       r.sym,
+      delta:     null,
+      value1m:   r.vol1m,
+      vwap1m:    r.price,
+      vwap2m:    null,
+      cnt1m:     r.cnt,
+      direction: '',
+      ts:        new Date().toISOString(),
+    }),
+  })
+  .then(res => res.json())
+  .then(data => { if (data.ok) setTimeout(fetchAlertHistory, 800); })
+  .catch(() => {});
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1958,6 +2168,8 @@ function updateStats() {
 function processBatch(trades) {
   if (!trades.length) return;
   const cut = cutoff5m();
+  const sweepAcc = {};   // sym → {val, price}  — condition F accumulator for this batch
+
   for (const t of trades) {
     if (t.ts_ms < cut) continue;
     if (LARGE_CAP_EXCLUDE.has(t.symbol)) continue;
@@ -1968,7 +2180,45 @@ function processBatch(trades) {
     totalTicks++;
     lastPrice.set(t.symbol, t.price);
     if (t.symbol === selectedSym) updateLiveBar(t.price, t.ts_ms);
+
+    // Sweep detection — condition F = Intermarket Sweep Order (ISO)
+    const isISO = Array.isArray(t.conditions) && t.conditions.includes('F');
+    if (!isISO) {
+      // Track last non-ISO price as the clean reference price before a sweep starts
+      lastNonFPrice.set(t.symbol, t.price);
+    } else {
+      const dollar = t.price * (t.size || 0);
+      if (!sweepAcc[t.symbol]) {
+        sweepAcc[t.symbol] = {
+          val:        0,
+          firstPrice: t.price,
+          lastPrice:  t.price,
+          prices:     [],
+          sizes:      [],
+          prePrice:   lastNonFPrice.get(t.symbol) || t.price,  // last clean price before sweep
+        };
+      }
+      sweepAcc[t.symbol].val      += dollar;
+      sweepAcc[t.symbol].lastPrice = t.price;
+      sweepAcc[t.symbol].prices.push(t.price);
+      sweepAcc[t.symbol].sizes.push(t.size || 0);
+    }
   }
+
+  // Emit sweep alerts for this batch
+  const batchTs = new Date().toLocaleTimeString('en-US', { hour12: false,
+    timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  for (const [sym, acc] of Object.entries(sweepAcc)) {
+    const meta    = symMeta[sym] || {};
+    const rawTier = getTier(meta.market_cap ?? null);
+    const capTier = (rawTier === 'other') ? 'unknown' : rawTier;
+    const { dir, conf } = sweepDirection(acc);
+    handleSweepAlert({
+      sym, dollar_val: Math.round(acc.val), cap_tier: capTier,
+      price: acc.lastPrice, direction: dir, confidence: conf, ts: batchTs,
+    });
+  }
+
   if (_chartDirty) { chart.update('none'); _chartDirty = false; }
   updateStats();
 }
@@ -1995,63 +2245,124 @@ function switchTab(id) {
   document.getElementById('paneHist').classList.toggle('hidden', id !== 'hist');
   document.getElementById('tabVol').classList.toggle('active',   id === 'vol');
   document.getElementById('tabHist').classList.toggle('active',  id === 'hist');
-  if (id === 'hist') fetchAlertHistory();
+  if (id === 'hist') fetchAlertHistory(selectedSym || null);
   if (id === 'vol')  renderVolumeSummary();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ALERT HISTORY  (persisted to backend /log/alerts)
 // ══════════════════════════════════════════════════════════════════════════════
-let _histLoaded = false;
+let _histLoaded  = false;
+let histFilterSym = null;   // currently active history filter ticker
 
-async function fetchAlertHistory() {
+function filterHistBySym(sym) {
+  histFilterSym = sym;
+  fetchAlertHistory(sym);
+}
+
+function clearHistFilter() {
+  histFilterSym = null;
+  fetchAlertHistory(null);
+}
+
+async function fetchAlertHistory(filterSym = histFilterSym) {
   try {
     const res  = await fetch('/log/alerts');
     const data = await res.json();
-    renderAlertHistory(data.alerts || []);
+    let alerts = data.alerts || [];
+    if (filterSym) alerts = alerts.filter(a => a.sym === filterSym);
+    renderAlertHistory(alerts, filterSym);
   } catch {
     document.getElementById('histBody').innerHTML =
       '<tr><td colspan="7" class="hist-empty">Failed to load history.</td></tr>';
   }
 }
 
-function renderAlertHistory(alerts) {
+function renderAlertHistory(alerts, filterSym = null) {
   const tbody = document.getElementById('histBody');
+
+  // Show/hide the filter bar
+  const filterBar   = document.getElementById('histFilterBar');
+  const filterLabel = document.getElementById('histFilterLabel');
+  if (filterSym) {
+    filterBar.style.display   = 'flex';
+    filterLabel.textContent   = filterSym;
+  } else {
+    filterBar.style.display   = 'none';
+    filterLabel.textContent   = '';
+  }
+
+  document.getElementById('tabHist').textContent =
+    filterSym ? `📋 ${filterSym}` : '📋 HISTORY';
   if (!alerts.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="hist-empty">No alerts recorded yet.</td></tr>';
-    document.getElementById('histFooter').textContent = '0 alerts';
+    document.getElementById('histFooter').textContent =
+      (filterSym ? `${filterSym} · ` : '') + '0 entries';
     return;
   }
 
-  // Show newest first
-  const sorted = [...alerts].reverse();
-  const frag   = document.createDocumentFragment();
-  for (const a of sorted) {
+  // Backend returns DESC by id (newest first) — no reverse needed
+  const frag = document.createDocumentFragment();
+  for (const a of alerts) {
+    const isVol = a.type === 'vol';
     const bull  = a.direction === 'bull';
     const ts    = a.ts ? new Date(a.ts) : null;
     const time  = ts
       ? ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         + ' ' + ts.toTimeString().slice(0, 8)
       : '—';
-    const dPct  = a.delta != null ? (a.delta >= 0 ? '+' : '') + Number(a.delta).toFixed(2) + '%' : '—';
-    const val   = a.value1m != null ? fmtVal(a.value1m) : '—';
-    const cnt   = a.cnt1m  != null ? a.cnt1m : '—';
-    const tag   = a.tag    || '';
+    const val  = a.value1m != null ? fmtVal(a.value1m) : '—';
+    const tag  = a.tag     || '';
+    const avgPx = a.vwap1m != null
+      ? '$' + (a.vwap1m >= 1 ? Number(a.vwap1m).toFixed(2) : Number(a.vwap1m).toFixed(4))
+      : null;
+    const volStr = a.cnt1m != null ? Number(a.cnt1m).toLocaleString() : null;
+    const avgVol = avgPx && volStr ? `${avgPx} · ${volStr}`
+                 : avgPx           ? avgPx
+                 : volStr          ? volStr
+                 : '—';
+
+    const isSweep = a.type === 'sweep';
+    let dirIcon, dirClass, deltaStr, displayTag;
+
+    if (isSweep) {
+      const sweepDir = (a.direction || '').toLowerCase();
+      if (sweepDir === 'bull') {
+        dirIcon  = '🔥'; dirClass = 'ht-bull';
+      } else if (sweepDir === 'bear') {
+        dirIcon  = '🔻'; dirClass = 'ht-bear';
+      } else {
+        dirIcon  = '⚡'; dirClass = 'ht-sweep';
+      }
+      // Confidence in Δ% column; tier extracted from "sweep:nano" tag
+      deltaStr   = a.delta != null ? Math.round(a.delta) + '%' : '—';
+      const rawTag = (a.tag || 'sweep');
+      displayTag = rawTag.includes(':') ? rawTag.split(':')[1].toUpperCase() : 'sweep';
+    } else if (isVol) {
+      dirIcon    = '⚡'; dirClass = 'ht-vol';
+      deltaStr   = '—'; displayTag = tag;
+    } else {
+      dirIcon    = bull ? '🔥' : '🔻';
+      dirClass   = bull ? 'ht-bull' : 'ht-bear';
+      deltaStr   = a.delta != null ? (a.delta >= 0 ? '+' : '') + Number(a.delta).toFixed(2) + '%' : '—';
+      displayTag = tag;
+    }
 
     const tr = document.createElement('tr');
     tr.innerHTML =
       `<td style="color:var(--dim);font-size:9.5px">${esc(time)}</td>` +
-      `<td class="ht-sym" style="cursor:pointer" onclick="selectSym('${esc(a.sym)}',true);loadNews('${esc(a.sym)}')">${esc(a.sym)}</td>` +
-      `<td class="r ${bull ? 'ht-bull' : 'ht-bear'}">${bull ? '🔥' : '🔻'}</td>` +
-      `<td class="r ${bull ? 'ht-bull' : 'ht-bear'}">${esc(dPct)}</td>` +
+      `<td class="ht-sym" style="cursor:pointer" title="Filter history to ${esc(a.sym)}" onclick="filterHistBySym('${esc(a.sym)}');selectSym('${esc(a.sym)}',true);loadNews('${esc(a.sym)}')">${esc(a.sym)}</td>` +
+      `<td class="r ${dirClass}">${dirIcon}</td>` +
+      `<td class="r ${dirClass}">${esc(deltaStr)}</td>` +
       `<td class="r" style="color:var(--yellow)">${esc(val)}</td>` +
-      `<td class="r" style="color:var(--dim)">${cnt}</td>` +
-      `<td class="ht-tag">${esc(tag)}</td>`;
+      `<td class="r" style="color:var(--dim);font-size:9.5px">${esc(avgVol)}</td>` +
+      `<td class="ht-tag">${esc(displayTag)}</td>`;
     frag.appendChild(tr);
   }
   tbody.replaceChildren(frag);
   document.getElementById('histFooter').textContent =
-    `${alerts.length} alerts · refreshed ${new Date().toTimeString().slice(0,8)}`;
+    (filterSym ? `${filterSym} · ` : '') +
+    `${alerts.length} entries · refreshed ${new Date().toTimeString().slice(0,8)}`;
   _histLoaded = true;
 }
 
@@ -2090,6 +2401,8 @@ function connect() {
       if (selectedSym && a.symbols && a.symbols.includes(selectedSym)) {
         prependNewsItem(a);
       }
+    } else if (msg.type === 'sweep') {
+      handleSweepAlert(msg);
     } else if (Array.isArray(msg)) {
       processBatch(msg);
       clearTimeout(summaryDebounce);
@@ -2123,17 +2436,298 @@ async function fetchYesterdayTop() {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// STOCK TAGS
+// ══════════════════════════════════════════════════════════════════════════════
+async function fetchStockTags() {
+  try {
+    const res  = await fetch('/tags');
+    const data = await res.json();
+    stockTags = data.tags || {};
+    console.log(`[tags] loaded ${Object.keys(stockTags).length} stock tags`);
+  } catch(e) { console.warn('[tags] fetch failed', e); }
+}
+
+function updateTagsBar(sym) {
+  const bar  = document.getElementById('stockTagsBar');
+  const data = stockTags[sym] || stockTags[sym?.toUpperCase()] || null;
+
+  if (!data && !sym) { bar.style.display = 'none'; return; }
+
+  bar.style.display = 'flex';
+  document.getElementById('tagBarSym').textContent = sym || '';
+
+  // Country chip
+  const countryEl = document.getElementById('tagBarCountry');
+  if (data?.country) {
+    countryEl.style.display = '';
+    countryEl.innerHTML = `<span class="tag-chip tag-country">${esc(data.country)}</span>`;
+  } else {
+    countryEl.style.display = 'none';
+  }
+
+  // Industry chip
+  const industryEl = document.getElementById('tagBarIndustry');
+  if (data?.industry) {
+    industryEl.style.display = '';
+    industryEl.innerHTML = `<span class="tag-chip tag-industry">${esc(data.industry)}</span>`;
+  } else {
+    industryEl.style.display = 'none';
+  }
+
+  // Custom tags
+  const tagsEl = document.getElementById('tagBarTags');
+  const tags   = data?.tags || [];
+  tagsEl.innerHTML = tags.map(t => `<span class="tag-chip tag-attr">${esc(t)}</span>`).join(' ');
+}
+
+async function refreshTags() {
+  const btn = document.getElementById('tagsRefreshBtn');
+  btn.textContent = '⏳ Syncing…';
+  btn.disabled = true;
+  try {
+    const res  = await fetch('/tags/refresh', { method: 'POST' });
+    const data = await res.json();
+    await fetchStockTags();                    // reload into memory
+    if (selectedSym) updateTagsBar(selectedSym); // refresh chips for current ticker
+    btn.textContent = `✅ ${data.count} synced`;
+    setTimeout(() => { btn.innerHTML = '🔄 Sync'; btn.disabled = false; }, 2000);
+  } catch(e) {
+    btn.textContent = '❌ Failed';
+    setTimeout(() => { btn.innerHTML = '🔄 Sync'; btn.disabled = false; }, 2000);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SWEEP ALERTS
+// ══════════════════════════════════════════════════════════════════════════════
+function etHHMM() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: false
+  }).formatToParts(new Date());
+  const h = parts.find(p => p.type === 'hour')?.value   || '0';
+  const m = parts.find(p => p.type === 'minute')?.value || '00';
+  return `${h}:${m}`;
+}
+
+// ── Sweep direction + confidence ──────────────────────────────────────────────
+// Three signals: intra-sweep price trend, sweep VWAP vs pre-sweep price, tick consistency
+function sweepDirection(acc) {
+  const { firstPrice, lastPrice: lastP, prices, sizes, prePrice } = acc;
+  const n = prices.length;
+  if (n === 0) return { dir: 'neutral', conf: 0 };
+
+  // ── Signal 1: intra-sweep price trend (did price rise or fall during sweep?) ──
+  const intraMove = (lastP - firstPrice) / (firstPrice || lastP);
+  const sig1 = intraMove > 0.0005 ? 1 : intraMove < -0.0005 ? -1 : 0;
+
+  // ── Signal 2: sweep VWAP vs clean reference price before sweep ──
+  const totalSz = sizes.reduce((s, sz) => s + sz, 0);
+  const vwap    = totalSz > 0
+    ? prices.reduce((s, p, i) => s + p * sizes[i], 0) / totalSz
+    : prices.reduce((s, p) => s + p, 0) / n;
+  const vsRef = prePrice ? (vwap - prePrice) / prePrice : 0;
+  const sig2  = vsRef > 0.001 ? 1 : vsRef < -0.001 ? -1 : 0;
+
+  // ── Signal 3: tick-by-tick consistency ──
+  let upTicks = 0, downTicks = 0;
+  for (let i = 1; i < prices.length; i++) {
+    if (prices[i] > prices[i - 1]) upTicks++;
+    else if (prices[i] < prices[i - 1]) downTicks++;
+  }
+  const moveTicks = upTicks + downTicks;
+  const sig3 = upTicks > downTicks ? 1 : downTicks > upTicks ? -1 : 0;
+
+  // ── Weighted vote (primary = trend, secondary = vs-reference, tertiary = consistency) ──
+  const vote = sig1 * 0.45 + sig2 * 0.35 + sig3 * 0.20;
+  const dir  = vote >  0.10 ? 'bull'
+             : vote < -0.10 ? 'bear'
+             :                'neutral';
+
+  // ── Confidence: 4 components, max 99 ──
+  // A. Intra-move strength: 0-35 pts (0.3% move fills bucket)
+  const movePts  = Math.min(Math.abs(intraMove) / 0.003, 1) * 35;
+  // B. Signal agreement: 0-30 pts (all 3 signals aligned = full)
+  const agreePts = Math.abs(vote) * 30;
+  // C. Tick count: 0-20 pts (≥5 ticks fills bucket)
+  const cntPts   = Math.min(n / 5, 1) * 20;
+  // D. Tick consistency: 0-14 pts
+  const consPts  = moveTicks > 0
+    ? (Math.max(upTicks, downTicks) / moveTicks) * 14 : 7;
+
+  const conf = Math.min(Math.round(movePts + agreePts + cntPts + consPts), 99);
+  return { dir, conf };
+}
+
+function handleSweepAlert(msg) {
+  if (!sweepConfig.enabled) return;
+  if (sweepConfig.blackout.includes(etHHMM())) return;
+
+  const tier   = (msg.cap_tier || 'unknown').toLowerCase();
+  const thresh = sweepConfig.thresholds[tier] || sweepConfig.thresholds.unknown;
+  const dollarK = msg.dollar_val / 1000;
+
+  if (dollarK < thresh.direct) return;
+
+  // Immediately log ALL direct-level sweeps to history
+  const sweepDir  = msg.direction  || 'neutral';
+  const sweepConf = msg.confidence ?? null;
+  fetch('/log/alert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tag:       `sweep:${tier}`,        // e.g. "sweep:nano" — tier stored in tag
+      type:      'sweep',
+      sym:       msg.sym,
+      delta:     sweepConf,              // confidence % stored in delta column
+      value1m:   msg.dollar_val,
+      vwap1m:    msg.price,
+      vwap2m:    null,
+      cnt1m:     null,
+      direction: sweepDir,               // 'bull' / 'bear' / 'neutral'
+      ts:        new Date().toISOString(),
+    }),
+  }).then(() => setTimeout(fetchAlertHistory, 500)).catch(() => {});
+
+  // Panel shows any sweep that meets the voice THRESHOLD (high-value condition)
+  // The voice checkbox only controls whether it speaks — not whether it appears
+  const meetsVoiceThresh = dollarK >= thresh.voice;
+  if (!meetsVoiceThresh) return;
+
+  sweepAlerts.unshift({ ...msg, localTs: Date.now() });
+  if (sweepAlerts.length > 500) sweepAlerts.length = 500;
+  try { sessionStorage.setItem('sweepAlerts', JSON.stringify(sweepAlerts)); } catch {}
+
+  renderSweepPanel();
+  if (sweepConfig.voice) speak(msg.sym + ' sweep');
+}
+
+const SWEEP_TIER_COLORS = { nano:'#e86060', small:'#e8a060', mid:'#60a0e8', big:'#a060e8', unknown:'#888' };
+
+function renderSweepPanel() {
+  const wrap  = document.getElementById('sweepWrap');
+  const count = document.getElementById('sweepCount');
+  count.textContent = sweepAlerts.length;
+
+  if (!sweepAlerts.length) {
+    wrap.innerHTML = '<div class="sweep-empty">Watching for ISO sweeps…</div>';
+    return;
+  }
+
+  const html = sweepAlerts.map(a => {
+    const tier  = (a.cap_tier || 'unknown').toLowerCase();
+    const color = SWEEP_TIER_COLORS[tier] || '#888';
+    const valStr = a.dollar_val >= 1_000_000
+      ? '$' + (a.dollar_val / 1_000_000).toFixed(2) + 'M'
+      : '$' + (a.dollar_val / 1000).toFixed(0) + 'K';
+
+    // Direction indicator
+    const dir  = (a.direction || 'neutral').toLowerCase();
+    const dirArrow = dir === 'bull' ? '▲' : dir === 'bear' ? '▼' : '◆';
+    const dirColor = dir === 'bull' ? '#3fb950' : dir === 'bear' ? '#f85149' : '#8b949e';
+    const conf = a.confidence != null ? a.confidence : null;
+    const confStr = conf != null
+      ? `<span style="font-size:9px;background:${dirColor}22;color:${dirColor};border:1px solid ${dirColor}44;border-radius:3px;padding:1px 5px;margin-left:3px">${conf}%</span>`
+      : '';
+
+    return `<div class="sweep-row voice-alert"
+               onclick="selectSym('${esc(a.sym)}',true);loadNews('${esc(a.sym)}');updateTagsBar('${esc(a.sym)}')">
+      <div class="sweep-top">
+        <span class="sweep-sym">${esc(a.sym)}</span>
+        <span style="color:${dirColor};font-weight:700;font-size:12px;margin-left:2px">${dirArrow}</span>
+        ${confStr}
+        <span class="sweep-val" style="margin-left:auto">${valStr}</span>
+      </div>
+      <div class="sweep-bot">
+        <span class="sweep-tier" style="color:${color};background:${color}22;border:1px solid ${color}44">${tier.toUpperCase()}</span>
+        <span class="sweep-price">@ $${a.price}</span>
+        <span class="sweep-ts">${esc(a.ts)}</span>
+      </div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML = html;
+}
+
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.1; u.pitch = 1.0; u.volume = 1.0;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
+function testVoice() { speak('AVEX sweep'); }
+
+const SWEEP_TTL = 5 * 60_000;  // 5 minutes
+
+function sweepCleanup() {
+  const cutoff = Date.now() - SWEEP_TTL;
+  const before = sweepAlerts.length;
+  sweepAlerts = sweepAlerts.filter(a => a.localTs >= cutoff);
+  if (sweepAlerts.length !== before) {
+    try { sessionStorage.setItem('sweepAlerts', JSON.stringify(sweepAlerts)); } catch {}
+    renderSweepPanel();
+  }
+}
+
+function onVoiceQuickToggle(checked) {
+  sweepConfig.voice = checked;
+  localStorage.setItem('sweepConfig', JSON.stringify(sweepConfig));
+  const smChk = document.getElementById('smSweepVoice');
+  if (smChk) smChk.checked = checked;
+}
+
+function loadSweepSettingsUI() {
+  document.getElementById('smSweepEnabled').checked  = sweepConfig.enabled;
+  document.getElementById('smSweepVoice').checked    = sweepConfig.voice;
+  document.getElementById('smSweepBlackout').value   = (sweepConfig.blackout || []).join(',');
+  document.getElementById('sweepVoiceQuick').checked = sweepConfig.voice;
+  const tiers = ['nano','small','mid','big','other'];
+  for (const t of tiers) {
+    const key = t === 'other' ? 'unknown' : t;
+    const th  = sweepConfig.thresholds[key] || DEFAULT_SWEEP_CONFIG.thresholds[key] || { direct:50, voice:150 };
+    const dEl = document.getElementById(`smSw${t.charAt(0).toUpperCase()+t.slice(1)}Direct`);
+    const vEl = document.getElementById(`smSw${t.charAt(0).toUpperCase()+t.slice(1)}Voice`);
+    if (dEl) dEl.value = th.direct;
+    if (vEl) vEl.value = th.voice;
+  }
+}
+
+function saveSweepSettings() {
+  sweepConfig.enabled  = document.getElementById('smSweepEnabled').checked;
+  sweepConfig.voice    = document.getElementById('smSweepVoice').checked;
+  sweepConfig.blackout = document.getElementById('smSweepBlackout').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const tiers = ['nano','small','mid','big','other'];
+  for (const t of tiers) {
+    const key = t === 'other' ? 'unknown' : t;
+    const dEl = document.getElementById(`smSw${t.charAt(0).toUpperCase()+t.slice(1)}Direct`);
+    const vEl = document.getElementById(`smSw${t.charAt(0).toUpperCase()+t.slice(1)}Voice`);
+    sweepConfig.thresholds[key] = {
+      direct: dEl ? +dEl.value : DEFAULT_SWEEP_CONFIG.thresholds[key].direct,
+      voice:  vEl ? +vEl.value : DEFAULT_SWEEP_CONFIG.thresholds[key].voice,
+    };
+  }
+  document.getElementById('sweepVoiceQuick').checked = sweepConfig.voice;
+  localStorage.setItem('sweepConfig', JSON.stringify(sweepConfig));
+}
+
 connect();
 fetchAlertHistory();
 fetchUniverseMeta();
 fetchYesterdayTop();
 fetchSuppressed();
+fetchStockTags();
 switchTab('vol');
+initBreakingNewsTicker();
+document.getElementById('sweepVoiceQuick').checked = sweepConfig.voice;
+renderSweepPanel();
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PERIODIC TASKS
 // ══════════════════════════════════════════════════════════════════════════════
 setInterval(() => { cleanData(); updateStats(); }, 10_000);
+setInterval(sweepCleanup, 30_000);
 
 // Evict stale newsCache entries older than NEWS_CACHE_TTL
 setInterval(() => {
@@ -2205,6 +2799,87 @@ document.getElementById('ctrlCooldown').addEventListener('input', e => {
 });
 
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BREAKING NEWS TICKER
+// ══════════════════════════════════════════════════════════════════════════════
+var _tickerItems   = [];
+var _tickerIdx     = 0;
+var _tickerTimer   = null;
+var _tickerRefresh = null;
+
+async function _loadTickerItems() {
+  try {
+    const res  = await fetch('/breaking-news');
+    const data = await res.json();
+    const items = data.items || [];
+    const ticker = document.getElementById('newsTicker');
+    if (items.length) {
+      _tickerItems = items;
+      ticker.style.display = 'flex';
+      _buildDots();
+    } else {
+      ticker.style.display = 'none';
+    }
+  } catch(e) { console.warn('[ticker] load failed', e); }
+}
+
+function _buildDots() {
+  const dots = document.getElementById('tickerDots');
+  dots.innerHTML = '';
+  _tickerItems.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'ticker-dot' + (i === _tickerIdx ? ' active' : '');
+    dots.appendChild(d);
+  });
+}
+
+function _updateDots() {
+  document.querySelectorAll('.ticker-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === _tickerIdx);
+  });
+}
+
+function _showTicker(immediate = false) {
+  if (!_tickerItems.length) return;
+  const el = document.getElementById('tickerText');
+
+  const apply = () => {
+    el.textContent = _tickerItems[_tickerIdx];
+    _updateDots();
+    el.classList.add('visible');
+    _tickerIdx = (_tickerIdx + 1) % _tickerItems.length;
+  };
+
+  if (immediate) {
+    apply();
+  } else {
+    el.classList.remove('visible');
+    setTimeout(apply, 620);
+  }
+}
+
+function initBreakingNewsTicker() {
+  _loadTickerItems().then(() => {
+    if (_tickerItems.length) {
+      _showTicker(true);                             // show first item immediately, no fade delay
+      _tickerTimer = setInterval(_showTicker, 7000); // rotate every 7s with fade
+    }
+  });
+  // Reload file every 60s so edits appear without restart
+  _tickerRefresh = setInterval(async () => {
+    const prev = _tickerItems.length;
+    await _loadTickerItems();
+    // If items changed, rebuild dots (index stays)
+    if (_tickerItems.length !== prev) {
+      _tickerIdx = 0;
+      _buildDots();
+      _showTicker();
+      if (_tickerTimer) clearInterval(_tickerTimer);
+      _tickerTimer = setInterval(_showTicker, 7000);
+    }
+  }, 60_000);
+}
 </script>
 </body>
 </html>

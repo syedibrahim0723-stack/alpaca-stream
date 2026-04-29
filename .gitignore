@@ -32,10 +32,18 @@ alerts.db
 alerts_log.jsonl
 etf_tickers.json
 yf_marketcap_cache.json
+finnhub_marketcap_cache.json
 yesterday_volume.json
 
 # Large data files — run ticker_universe.py to regenerate
 stock_universe_full.csv
+
+# Generated / reference files
+static/*.xlsx
+static/diagram.html
+static/journal.html
+breaking_news.json
+stock_tags.json
 
 # Claude Code internal
 .claude/

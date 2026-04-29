@@ -40,6 +40,7 @@ import requests as req_lib
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 try:
     from dotenv import load_dotenv
@@ -64,7 +65,9 @@ if not API_KEY or not SECRET_KEY:
     )
 
 ET = pytz.timezone("America/New_York")
-BAD_CONDITIONS = {"U", "W", "Z"}
+# Filter only end-of-day auction prints that produce giant single-print distortions:
+# M = Market Center Close (MOC auction), Q = Market Center Official Close
+BAD_CONDITIONS = {"M", "Q"}
 
 # ── Universe files ─────────────────────────────────────────────────────────────
 UNIVERSE_CSV       = Path(__file__).parent / "stock_universe_full.csv"
@@ -95,6 +98,7 @@ def _cap_tier(market_cap) -> dict:
 EXCLUDE_SYMS:   set[str]        = set()   # all ETFs + top-100 stocks by market cap
 SYM_META:       dict[str, dict] = {}      # sym → {market_cap, cap_tier, spike_thresh, …}
 YESTERDAY_TOP50: set[str]       = set()   # top-50 by dollar volume from yesterday
+STOCK_TAGS: dict[str, dict]     = {}      # sym → {market_cap, industry, country, tags:[]}
 
 # ── Fallback hardcoded exclude (used if CSV not found yet) ────────────────────
 _FALLBACK_EXCLUDE: frozenset = frozenset({
@@ -316,7 +320,9 @@ async def _refresh_etf_exclude() -> None:
         await asyncio.sleep(60)
 
 
-YF_CACHE_FILE = Path(__file__).parent / "yf_marketcap_cache.json"
+YF_CACHE_FILE       = Path(__file__).parent / "yf_marketcap_cache.json"
+FINNHUB_CACHE_FILE  = Path(__file__).parent / "finnhub_marketcap_cache.json"
+FINNHUB_API_KEY     = "d7gj0apr01qmqj45hqq0d7gj0apr01qmqj45hqqg"
 
 
 def _enrich_with_yfinance() -> None:
@@ -401,6 +407,136 @@ def _apply_yf_cache(cache: dict) -> None:
         print(f"[yf] applied {applied:,} cached market caps to SYM_META")
 
 
+def _enrich_with_finnhub() -> None:
+    """
+    For every symbol in SYM_META that still has no market cap after yfinance,
+    fetch it from Finnhub company_profile2. Returns marketCapitalization in $M
+    so we multiply by 1,000,000 before storing.
+    Free tier: 60 calls/min — sleep 1.1s per call.
+    Cache stored in finnhub_marketcap_cache.json.
+    """
+    try:
+        import finnhub
+    except ImportError:
+        print("[finnhub] finnhub-python not installed — run: pip install finnhub-python")
+        return
+
+    cache: dict[str, float | None] = {}
+    if FINNHUB_CACHE_FILE.exists():
+        try:
+            cache = json.loads(FINNHUB_CACHE_FILE.read_text(encoding="utf-8"))
+            print(f"[finnhub] loaded {len(cache):,} cached market caps")
+        except Exception as exc:
+            print(f"[finnhub] ⚠ cache read failed: {exc}")
+
+    _apply_finnhub_cache(cache)
+
+    missing = [
+        sym for sym, meta in SYM_META.items()
+        if meta.get("market_cap") is None and sym not in cache
+    ]
+
+    if not missing:
+        print("[finnhub] no missing market caps — nothing to fetch")
+        return
+
+    print(f"[finnhub] fetching market caps for {len(missing):,} symbols…")
+    client  = finnhub.Client(api_key=FINNHUB_API_KEY)
+    fetched = 0
+    errors  = 0
+
+    for sym in missing:
+        try:
+            profile = client.company_profile2(symbol=sym)
+            cap_m   = profile.get("marketCapitalization") if profile else None
+            if cap_m and float(cap_m) > 0:
+                cache[sym] = float(cap_m) * 1_000_000
+                fetched += 1
+            else:
+                cache[sym] = None
+        except Exception as exc:
+            print(f"[finnhub] {sym} failed: {exc}")
+            cache[sym] = None
+            errors += 1
+        time.sleep(1.1)
+
+    try:
+        FINNHUB_CACHE_FILE.write_text(json.dumps(cache, indent=2), encoding="utf-8")
+    except Exception as exc:
+        print(f"[finnhub] ⚠ cache write failed: {exc}")
+
+    _apply_finnhub_cache(cache)
+    print(f"[finnhub] ✅ enriched {fetched:,} market caps ({errors} failed) "
+          f"→ {sum(1 for m in SYM_META.values() if m.get('market_cap'))} total with cap")
+
+
+def _apply_finnhub_cache(cache: dict) -> None:
+    """Write cached Finnhub market caps back into SYM_META for symbols that still lack them."""
+    applied = 0
+    for sym, cap in cache.items():
+        if sym in SYM_META and SYM_META[sym].get("market_cap") is None and cap:
+            SYM_META[sym]["market_cap"] = cap
+            applied += 1
+    if applied:
+        print(f"[finnhub] applied {applied:,} cached market caps to SYM_META")
+
+
+def _sync_stock_tags() -> None:
+    """Fetch stock tags from Google Sheet CSV, cache to stock_tags.json. Runs at startup + scheduled."""
+    global STOCK_TAGS
+    try:
+        import urllib.request, csv as _csv, io
+        req = urllib.request.Request(GSHEET_CSV_URL, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read().decode("utf-8-sig")
+        reader = _csv.DictReader(io.StringIO(raw))
+        result = {}
+        for row in reader:
+            ticker = row.get("ticker", "").strip().upper()
+            if not ticker:
+                continue
+            tags_raw = row.get("tags", "").strip()
+            tags = [t.strip() for t in tags_raw.split(",") if t.strip()] if tags_raw else []
+            result[ticker] = {
+                "market_cap": row.get("market cap", "").strip(),
+                "industry":   row.get("industry", "").strip(),
+                "country":    row.get("country", "").strip(),
+                "tags":       tags,
+            }
+        STOCK_TAGS = result
+        STOCK_TAGS_FILE.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        print(f"[tags] ✅ synced {len(result)} stocks from Google Sheet")
+    except Exception as exc:
+        print(f"[tags] ⚠ sync failed: {exc} — loading from cache")
+        if STOCK_TAGS_FILE.exists():
+            try:
+                STOCK_TAGS = json.loads(STOCK_TAGS_FILE.read_text(encoding="utf-8"))
+                print(f"[tags] loaded {len(STOCK_TAGS)} stocks from cache")
+            except Exception as e2:
+                print(f"[tags] ⚠ cache load failed: {e2}")
+
+
+async def _tags_scheduler() -> None:
+    """Sync tags at startup, then daily at 08:00 and 13:00 ET."""
+    await asyncio.to_thread(_sync_stock_tags)
+    while True:
+        now = datetime.now(ET)
+        # Calculate next sync: 08:00 or 13:00 ET
+        targets = [now.replace(hour=8, minute=0, second=0, microsecond=0),
+                   now.replace(hour=13, minute=0, second=0, microsecond=0)]
+        future = [t for t in targets if t > now]
+        if not future:
+            # Past both today — wait until 08:00 tomorrow
+            tomorrow = now + timedelta(days=1)
+            next_sync = tomorrow.replace(hour=8, minute=0, second=0, microsecond=0)
+        else:
+            next_sync = min(future)
+        wait_secs = (next_sync - now).total_seconds()
+        print(f"[tags] next sync at {next_sync.strftime('%H:%M ET')} ({wait_secs/3600:.1f}h)")
+        await asyncio.sleep(wait_secs)
+        await asyncio.to_thread(_sync_stock_tags)
+
+
 def load_yesterday_volume() -> None:
     """Load yesterday's top-50 dollar-volume tickers for momentum highlighting."""
     global YESTERDAY_TOP50
@@ -414,7 +550,10 @@ def load_yesterday_volume() -> None:
     except Exception as exc:
         print(f"[yesterday] ⚠ failed to load: {exc}")
 
-ALERTS_DB = Path(__file__).parent / "alerts.db"  # SQLite — permanent, no file-locking issues
+ALERTS_DB          = Path(__file__).parent / "alerts.db"
+BREAKING_NEWS_FILE = Path(__file__).parent / "breaking_news.json"
+STOCK_TAGS_FILE    = Path(__file__).parent / "stock_tags.json"
+GSHEET_CSV_URL     = "https://docs.google.com/spreadsheets/d/1T5WXga3cO12AWFy-HnADJJKOHopiObxhncvikpDt3iQ/export?format=csv&gid=0"
 
 def _init_db() -> None:
     """Create the alerts table if it doesn't exist."""
@@ -430,9 +569,14 @@ def _init_db() -> None:
                 vwap1m    REAL,
                 vwap2m    REAL,
                 cnt1m     INTEGER,
-                direction TEXT
+                direction TEXT,
+                type      TEXT DEFAULT 'alert'
             )
         """)
+        try:
+            conn.execute("ALTER TABLE alerts ADD COLUMN type TEXT DEFAULT 'alert'")
+        except Exception:
+            pass  # column already exists
         conn.execute("""
             CREATE TABLE IF NOT EXISTS suppressed (
                 sym        TEXT PRIMARY KEY,
@@ -594,6 +738,7 @@ def _push_to_pulszy(sym: str, data: dict) -> None:
 app = FastAPI(title="Alpaca Trade Stream")
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ── In-memory stores ──────────────────────────────────────────────────────────
 trades_store:  deque            = deque(maxlen=200_000)
@@ -619,6 +764,7 @@ client_locks: dict[WebSocket, asyncio.Lock] = {}
 
 # ── FIX #5: Cleanup throttle ─────────────────────────────────────────────────
 _last_cleanup: float = 0.0
+
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -698,14 +844,14 @@ async def handle_trade(data) -> None:
     ms = int(ts.timestamp() * 1000)
 
     trade = {
-        "symbol": data.symbol,
-        "price":  float(data.price),
-        "size":   int(data.size or 0),
-        "time":   ts.strftime("%H:%M:%S.") + f"{ts.microsecond // 1000:03d}",
-        "ts_ms":  ms,
-        "_ts":    ts,
-        # tick data for aggregation — consumed by queue_processor
-        "_agg":   (data.symbol, float(data.price), int(data.size or 0), ms),
+        "symbol":     data.symbol,
+        "price":      float(data.price),
+        "size":       int(data.size or 0),
+        "time":       ts.strftime("%H:%M:%S.") + f"{ts.microsecond // 1000:03d}",
+        "ts_ms":      ms,
+        "_ts":        ts,
+        "_agg":       (data.symbol, float(data.price), int(data.size or 0), ms),
+        "conditions": list(data.conditions) if data.conditions else [],
     }
     try:
         trade_queue.put_nowait(trade)
@@ -713,10 +859,111 @@ async def handle_trade(data) -> None:
         pass
 
 
+class _ThrottledTradeStream(StockDataStream):
+    """StockDataStream with backoff retry and clean exit on connection-limit errors."""
+    _connection_limit_hit: bool = False
+
+    async def _run_forever(self) -> None:
+        # Mirror the library's own startup gate: wait until a subscription exists
+        self._loop = asyncio.get_running_loop()
+        while not any(
+            v for k, v in self._handlers.items()
+            if k not in ("cancelErrors", "corrections")
+        ):
+            if not self._stop_stream_queue.empty():
+                self._stop_stream_queue.get(timeout=1)
+                return
+            await asyncio.sleep(0)
+
+        self._should_run = True
+        self._running    = False
+        backoff = 5
+
+        while True:
+            try:
+                if not self._should_run:
+                    return
+                if not self._running:
+                    await self._start_ws()
+                    await self._send_subscribe_msg()
+                    self._running = True
+                await self._consume()
+                backoff = 5
+            except ValueError as exc:
+                if "connection limit" in str(exc).lower():
+                    print("[trade-stream] connection limit — will retry in 60s")
+                    self._connection_limit_hit = True
+                    return          # exit cleanly; asyncio.run() closes loop
+                self._running = False
+                print(f"[trade-stream] {exc} — retry in {backoff}s")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60)
+            except Exception as exc:
+                await self.close()
+                self._running = False
+                print(f"[trade-stream] {exc} — retry in {backoff}s")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60)
+            finally:
+                await asyncio.sleep(0)
+
+
+class _ThrottledNewsStream(NewsDataStream):
+    """NewsDataStream with backoff retry and clean exit on connection-limit errors."""
+    _connection_limit_hit: bool = False
+
+    async def _run_forever(self) -> None:
+        self._loop = asyncio.get_running_loop()
+        while not any(
+            v for k, v in self._handlers.items()
+            if k not in ("cancelErrors", "corrections")
+        ):
+            if not self._stop_stream_queue.empty():
+                self._stop_stream_queue.get(timeout=1)
+                return
+            await asyncio.sleep(0)
+
+        self._should_run = True
+        self._running    = False
+        backoff = 5
+
+        while True:
+            try:
+                if not self._should_run:
+                    return
+                if not self._running:
+                    await self._start_ws()
+                    await self._send_subscribe_msg()
+                    self._running = True
+                await self._consume()
+                backoff = 5
+            except ValueError as exc:
+                if "connection limit" in str(exc).lower():
+                    print("[news-stream] connection limit — will retry in 60s")
+                    self._connection_limit_hit = True
+                    return
+                self._running = False
+                print(f"[news-stream] {exc} — retry in {backoff}s")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60)
+            except Exception as exc:
+                await self.close()
+                self._running = False
+                print(f"[news-stream] {exc} — retry in {backoff}s")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60)
+            finally:
+                await asyncio.sleep(0)
+
+
 def run_trade_stream() -> None:
-    stream = StockDataStream(API_KEY, SECRET_KEY, feed=DataFeed.SIP)
-    stream.subscribe_trades(handle_trade, "*")
-    stream.run()
+    while True:
+        stream = _ThrottledTradeStream(API_KEY, SECRET_KEY, feed=DataFeed.SIP)
+        stream.subscribe_trades(handle_trade, "*")
+        stream.run()
+        delay = 60 if stream._connection_limit_hit else 10
+        print(f"[trade-stream] sleeping {delay}s before reconnect")
+        time.sleep(delay)
 
 
 # ── News stream ───────────────────────────────────────────────────────────────
@@ -736,12 +983,13 @@ async def handle_news(data) -> None:
 
 
 def run_news_stream() -> None:
-    try:
-        nstream = NewsDataStream(API_KEY, SECRET_KEY)
-        nstream.subscribe_news(handle_news, "*")
-        nstream.run()
-    except Exception as exc:
-        print(f"[news-stream] failed to start: {exc}")
+    while True:
+        stream = _ThrottledNewsStream(API_KEY, SECRET_KEY)
+        stream.subscribe_news(handle_news, "*")
+        stream.run()
+        delay = 60 if stream._connection_limit_hit else 10
+        print(f"[news-stream] sleeping {delay}s")
+        time.sleep(delay)
 
 
 # ── WebSocket broadcast ───────────────────────────────────────────────────────
@@ -786,12 +1034,10 @@ async def queue_processor() -> None:
             pass
 
         if batch:
-            # FIX #1: aggregate_tick called here, on the event loop — no cross-thread access.
             for t in batch:
                 agg = t.pop("_agg", None)
                 if agg:
                     aggregate_tick(*agg)
-                    # Track today's dollar volume per symbol for EOD momentum save
                     sym, price, size, _ = agg
                     daily_volume[sym] = daily_volume.get(sym, 0.0) + price * size
                 trades_store.append(t)
@@ -1020,8 +1266,8 @@ def _write_alert(body: dict) -> None:
     """Insert one alert row into SQLite (runs in thread pool)."""
     with sqlite3.connect(ALERTS_DB) as conn:
         conn.execute(
-            "INSERT INTO alerts (ts,sym,tag,delta,value1m,vwap1m,vwap2m,cnt1m,direction) "
-            "VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO alerts (ts,sym,tag,delta,value1m,vwap1m,vwap2m,cnt1m,direction,type) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
                 body.get("ts"),
                 body.get("sym"),
@@ -1031,11 +1277,12 @@ def _write_alert(body: dict) -> None:
                 body.get("vwap1m"),
                 body.get("vwap2m"),
                 body.get("cnt1m"),
-                body.get("direction"),
+                body.get("direction", ""),
+                body.get("type", "alert"),
             ),
         )
         conn.commit()
-    print(f"[alert-db] saved {body.get('tag','new')} alert for ${body.get('sym')}")
+    print(f"[alert-db] saved {body.get('type','alert')}:{body.get('tag','new')} for ${body.get('sym')}")
 
 
 @app.post("/log/alert")
@@ -1056,7 +1303,7 @@ async def get_alert_log() -> JSONResponse:
             with sqlite3.connect(ALERTS_DB) as conn:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute(
-                    "SELECT * FROM alerts ORDER BY id DESC LIMIT 500"
+                    "SELECT * FROM alerts ORDER BY id DESC LIMIT 1000"
                 ).fetchall()
             return [dict(r) for r in rows]
 
@@ -1136,9 +1383,46 @@ async def refresh_universe() -> JSONResponse:
 
 @app.post("/universe/refresh-caps")
 async def refresh_caps() -> JSONResponse:
-    """Re-fetch missing market caps from Yahoo Finance in a background thread."""
-    threading.Thread(target=_enrich_with_yfinance, daemon=True).start()
-    return JSONResponse({"ok": True, "missing_before": sum(1 for m in SYM_META.values() if not m.get("market_cap"))})
+    """Re-fetch missing market caps from Yahoo Finance then Finnhub."""
+    missing_before = sum(1 for m in SYM_META.values() if not m.get("market_cap"))
+    def _enrich_all():
+        _enrich_with_yfinance()
+        _enrich_with_finnhub()
+    threading.Thread(target=_enrich_all, daemon=True).start()
+    return JSONResponse({"ok": True, "missing_before": missing_before})
+
+
+@app.get("/breaking-news")
+async def get_breaking_news() -> JSONResponse:
+    """Return breaking news headlines from breaking_news.json (reloaded live — no restart needed)."""
+    try:
+        if BREAKING_NEWS_FILE.exists():
+            items = json.loads(BREAKING_NEWS_FILE.read_text(encoding="utf-8"))
+            if isinstance(items, list):
+                return JSONResponse({"items": [str(s).strip() for s in items if str(s).strip()]})
+        return JSONResponse({"items": []})
+    except Exception as exc:
+        return JSONResponse({"items": [], "error": str(exc)})
+
+
+@app.get("/tags")
+async def get_tags() -> JSONResponse:
+    """Return all stock tags."""
+    return JSONResponse({"tags": STOCK_TAGS})
+
+
+@app.get("/tags/{sym}")
+async def get_tag(sym: str) -> JSONResponse:
+    """Return tags for a specific symbol."""
+    sym = sym.upper().strip()
+    return JSONResponse({"sym": sym, "data": STOCK_TAGS.get(sym, {})})
+
+
+@app.post("/tags/refresh")
+async def refresh_tags() -> JSONResponse:
+    """Manually trigger a Google Sheet sync."""
+    await asyncio.to_thread(_sync_stock_tags)
+    return JSONResponse({"ok": True, "count": len(STOCK_TAGS)})
 
 
 @app.get("/yesterday/top")
@@ -1163,9 +1447,13 @@ async def startup() -> None:
     asyncio.create_task(queue_processor())
     asyncio.create_task(eod_saver())
     asyncio.create_task(_refresh_etf_exclude())   # fetch live ETF list in background
+    asyncio.create_task(_tags_scheduler())         # sync stock tags from Google Sheet
     threading.Thread(target=run_trade_stream,    daemon=True).start()
     threading.Thread(target=run_news_stream,     daemon=True).start()
-    threading.Thread(target=_enrich_with_yfinance, daemon=True).start()  # fill missing market caps
+    def _enrich_all_caps():
+        _enrich_with_yfinance()
+        _enrich_with_finnhub()
+    threading.Thread(target=_enrich_all_caps, daemon=True).start()  # fill missing market caps
     if PULSZY_URL and PULSZY_REFRESH_TOKEN:
         print(f"[pulszy] ✅ configured via refresh token → {PULSZY_URL}")
     elif PULSZY_URL and PULSZY_EMAIL:
@@ -1204,13 +1492,17 @@ async def ws_endpoint(ws: WebSocket) -> None:
         await safe_send(ws, json.dumps({"type": "init", "data": recent_trades()}))
         while True:
             try:
-                await asyncio.wait_for(ws.receive_text(), timeout=25)
+                msg = await asyncio.wait_for(ws.receive(), timeout=30)
+                if msg.get("type") == "websocket.disconnect":
+                    break
             except asyncio.TimeoutError:
-                await safe_send(ws, '{"type":"ping"}')
+                ok = await safe_send(ws, '{"type":"ping"}')
+                if not ok:
+                    break
     except WebSocketDisconnect:
         pass
-    except Exception as exc:
-        print(f"[ws] unexpected error: {exc}")
+    except Exception:
+        pass
     finally:
         clients.discard(ws)
         client_locks.pop(ws, None)
