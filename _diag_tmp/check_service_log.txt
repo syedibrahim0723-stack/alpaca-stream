@@ -1,0 +1,43 @@
+WARNING: The private SSH key file for gcloud does not exist.
+WARNING: The public SSH key file for gcloud does not exist.
+WARNING: The PuTTY PPK SSH key file for gcloud does not exist.
+WARNING: You do not have an SSH key for gcloud.
+WARNING: SSH keygen will be executed to generate a key.
+Updating project ssh metadata...
+.........Updated [https://www.googleapis.com/compute/v1/projects/project-062a1e95-5575-43f3-adf].
+.done.
+Waiting for SSH key to propagate.
+The host key is not cached for this server:
+  34.173.122.106 (port 22)
+You have no guarantee that the server is the computer you
+think it is.
+The server's ssh-ed25519 key fingerprint is:
+  ssh-ed25519 255 SHA256:knJNimhWOdAko2bisPfp9WjmZKjLFLmRzx7fS3Nyd7E
+If you trust this host, enter "y" to add the key to Plink's
+cache and carry on connecting.
+If you want to carry on connecting just once, without adding
+the key to the cache, enter "n".
+If you do not trust this host, press Return to abandon the
+connection.
+Store key in cache? (y/n, Return cancels connection, i for more info) ● alpaca-stream.service - Alpaca Live Stream
+     Loaded: loaded (/etc/systemd/system/alpaca-stream.service; enabled; preset: enabled)
+     Active: active (running) since Sat 2026-06-20 16:33:45 UTC; 14min ago
+   Main PID: 442 (uvicorn)
+      Tasks: 13 (limit: 19173)
+     Memory: 1.0G
+        CPU: 3min 14.424s
+     CGroup: /system.slice/alpaca-stream.service
+             └─442 /opt/alpaca-stream/venv/bin/python3 /opt/alpaca-stream/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --ws-ping-interval 0 --ws-ping-timeout 0
+
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]: ValueError: connection limit exceeded
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]: error during websocket communication: connection limit exceeded
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]: Traceback (most recent call last):
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 343, in _run_forever
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]:     await self._start_ws()
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 135, in _start_ws
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]:     await self._auth()
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 126, in _auth
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]:     raise ValueError(msg[0].get("msg", "auth failed"))
+Jun 20 16:48:00 instance-20260402-210914 uvicorn[442]: ValueError: connection limit exceeded
+----HTTP-CHECK----
+HTTP_CODE:200

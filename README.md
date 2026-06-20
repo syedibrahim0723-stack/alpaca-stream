@@ -1,93 +1,203 @@
-# ⚡ Alpaca Live Trade Stream
+# Alpaca Live Trade Stream Dashboard
 
-A real-time stock trade dashboard powered by Alpaca's Paper Trading API.
-
-- **Backend**: FastAPI + WebSocket, streaming all trades via `StockDataStream`
-- **Frontend**: Dark dashboard with live scrolling trade table + Chart.js price chart
-- **Data window**: Only the last **5 minutes** of trades are kept in memory
+A real-time stock monitoring dashboard that streams live trade data via Alpaca's SIP feed, detects institutional activity (ISO sweeps, volume spikes, price moves), and surfaces breaking news — all in a single-page dark-mode UI.
 
 ---
 
-## Quick Start
+## Features
 
-### 1. Clone / set up the repo
+### Live Monitoring
+- **Vol Spikes** — Detects abnormal volume surges per market-cap tier (nano/small/mid). Filters out ETFs and large-caps automatically.
+- **ISO Sweeps** — Identifies Intermarket Sweep Orders using VWAP deviation, directional delta, and dollar value thresholds.
+- **Price Moves** — Flags stocks moving >3–8% (threshold varies by cap tier) with live bull/bear classification.
+- **Alert History** — Persistent SQLite log of all alerts with deduplication, accessible across sessions.
 
-```bash
-git clone https://github.com/YOUR_USERNAME/alpaca-stream.git
-cd alpaca-stream
-```
+### Chart & Context
+- **Minute-level price chart** (Chart.js) with intraday bars and sweep context lines (avg bull/bear VWAP).
+- **Symbol selector** — click any alert to pin a symbol; chart auto-loads the day's bars.
+- **News panel** — 7-day news history per symbol via Alpaca NewsStream; live breaking news ticker.
+- **Stock tags** — industry, country, and custom user tags per symbol.
 
-### 2. Create a virtual environment and install dependencies
-
-```bash
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 3. Configure your API keys
-
-Copy `.env.example` to `.env` and fill in your Alpaca Paper credentials:
-
-```bash
-cp .env.example .env
-```
-
-```
-ALPACA_API_KEY=your_paper_api_key_here
-ALPACA_SECRET_KEY=your_paper_secret_key_here
-```
-
-> ⚠️ `.env` is in `.gitignore` — your keys will **never** be committed to GitHub.
-
-### 4. Run the app
-
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Open your browser at: **http://localhost:8000**
+### Voice Alerts
+- Browser Text-to-Speech announces sweep and move alerts in real time.
+- Per-symbol suppress list with expiry.
+- Configurable cooldown to prevent alert fatigue.
 
 ---
 
 ## Architecture
 
 ```
-Alpaca WebSocket (SIP)
+Alpaca SIP Feed (WebSocket)
         │
-   handle_trade()          ← async, runs in Alpaca's event loop (thread)
+        ▼
+  main.py (FastAPI)
+  ├── StockDataStream   — tick aggregation → 1-min OHLCV bars
+  ├── NewsDataStream    — live news broadcast
+  ├── SQLite            — persistent alert log with server-side dedup
+  ├── REST endpoints    — /bars, /news, /log/alerts, /tags, /universe/meta …
+  └── WebSocket /ws     — fans out to all browser clients
         │
-   thread-safe Queue
-        │
-   queue_processor()       ← FastAPI background task, runs every 20 ms
-        │
-   ┌────┴──────────────────┐
-   │  trades_store (deque) │  ← rolling buffer, last 5 min only
-   └───────────────────────┘
-        │
-   WebSocket broadcast → browser
+        ▼
+  static/index.html (single-page app)
+  ├── Vol Spike detector
+  ├── ISO Sweep detector
+  ├── Move alert engine (cap-tier aware)
+  ├── Chart.js minute chart + sweep context lines
+  ├── News panel + breaking news ticker
+  └── Voice alert engine (Web Speech API)
 ```
-
-## Notes
-
-- Uses **SIP** (consolidated tape) feed. If you only have an IEX entitlement, change `DataFeed.SIP` → `DataFeed.IEX` in `main.py`.
-- Subscribes to **all symbols** (`*`). Expect high throughput during market hours (thousands of trades/sec).
-- `trades_store` holds at most 200 000 records. The 5-minute cleanup runs automatically.
-- The chart shows prices for whichever symbol you select in the dropdown.
 
 ---
 
-## Pushing to GitHub
+## Requirements
+
+- Python 3.10+
+- Alpaca **paper or live** account with SIP data subscription
+
+---
+
+## Setup
+
+### 1. Install dependencies
 
 ```bash
-git init
-git add .
-git commit -m "feat: alpaca live trade stream"
-
-# Create a new repo on github.com, then:
-git remote add origin https://github.com/YOUR_USERNAME/alpaca-stream.git
-git branch -M main
-git push -u origin main
+git clone <repo-url>
+cd alpaca-stream
+pip install -r requirements.txt
 ```
 
-> ✅ `.env` is gitignored — only `.env.example` (with placeholders) gets pushed.
+### 2. Configure API keys
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```env
+ALPACA_API_KEY=your_api_key_here
+ALPACA_SECRET_KEY=your_secret_key_here
+```
+
+> Keys are available at [https://app.alpaca.markets](https://app.alpaca.markets) under Paper or Live accounts.
+
+### 3. Build the stock universe (optional but recommended)
+
+```bash
+python ticker_universe.py
+```
+
+This generates `stock_universe_full.csv` with market caps, sectors, and ETF flags used for cap-tier alert filtering. Without it a hardcoded fallback exclusion list is used.
+
+### 4. Run the server
+
+**Windows:**
+```bash
+python launcher.py
+```
+
+**Linux / macOS:**
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+> **Do not use `--reload`** — it creates duplicate Alpaca WebSocket connections which will hit the rate limit.
+
+### 5. Open the dashboard
+
+```
+http://localhost:8000
+```
+
+---
+
+## Project Structure
+
+```
+alpaca-stream/
+├── main.py                       # FastAPI backend — streaming, aggregation, REST API
+├── launcher.py                   # Windows-safe uvicorn entry point
+├── ticker_universe.py            # Builds stock_universe_full.csv with market cap data
+├── stock_universe_full.csv       # Symbol universe (generated by ticker_universe.py)
+├── requirements.txt
+├── .env                          # API keys (git-ignored)
+├── .env.example                  # Key template
+├── alerts.db                     # SQLite alert log (auto-created on first run)
+├── static/
+│   ├── index.html                # Main dashboard (single-page app)
+│   ├── flow.html                 # Data flow diagram
+│   └── dashboard_data_flow.xlsx  # Calculation reference (downloadable from UI)
+├── setup_vm.sh                   # GCP VM provisioning script
+├── deploy.bat                    # One-command GCP deploy (Windows)
+└── GCP_SETUP.md                  # Cloud deployment guide
+```
+
+---
+
+## API Reference
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Serves the dashboard |
+| `WS` | `/ws` | WebSocket — live trades + news broadcast |
+| `GET` | `/bars/{sym}` | Intraday minute bars for a symbol |
+| `GET` | `/news/{sym}` | 7-day news history |
+| `GET` | `/log/alerts` | Full alert history from SQLite |
+| `POST` | `/log/alert` | Write alert to SQLite (called by frontend) |
+| `GET` | `/universe/meta` | Cap-tier thresholds + symbol metadata |
+| `POST` | `/universe/refresh` | Re-fetch market caps |
+| `GET` | `/tags/{sym}` | Stock tags (industry, country, custom) |
+| `GET` | `/yesterday/top` | Top 50 symbols by yesterday's dollar volume |
+| `GET` | `/breaking-news` | Cached breaking news items |
+| `GET` | `/api/stats` | Server stats (connected clients, symbols tracked) |
+
+---
+
+## Alert Logic
+
+### Volume Spike
+Fires when 1-minute volume exceeds `yesterday_avg × spike_multiplier` for the symbol's cap tier:
+
+| Tier | Market Cap | Spike Threshold | Min Volume | Min Move |
+|------|------------|-----------------|------------|----------|
+| Nano | < $300M | 20× | 5,000 | 8% |
+| Small | < $2B | 15× | 10,000 | 5% |
+| Mid | < $10B | 10× | 15,000 | 3% |
+
+Large-cap and mega-cap stocks are excluded entirely from all alerts.
+
+### ISO Sweep Detection
+Fires when:
+- 1-min dollar value exceeds the tier threshold
+- VWAP deviation confirms directional conviction (bull or bear)
+- Net delta (buy volume − sell volume) is sufficiently skewed
+
+### Deduplication
+Two layers prevent duplicate alerts:
+
+| Layer | Mechanism |
+|-------|-----------|
+| **Client** | JS `Map` keyed on `sym\|direction\|rounded_delta\|rounded_value`, 10-second window |
+| **Server** | SQLite pre-insert check — same sym + direction + value ±2 + delta ±1 within 10 seconds → skip |
+
+---
+
+## Deployment (GCP)
+
+```bash
+deploy.bat
+```
+
+This copies all files to the VM, uploads `.env` securely, and restarts the `alpaca-stream` systemd service. Prints the external IP on completion.
+
+See `GCP_SETUP.md` for first-time VM provisioning.
+
+---
+
+## Notes
+
+- `.env` is git-ignored — never commit API keys.
+- `alerts.db` grows indefinitely; prune manually or add a scheduled cleanup if running long-term.
+- On Windows, `launcher.py` forces `WindowsSelectorEventLoopPolicy` required by the `websockets` library on Python 3.12.
+- Uses the **SIP** (consolidated tape) feed. If you only have IEX entitlement, change `DataFeed.SIP` → `DataFeed.IEX` in `main.py`.

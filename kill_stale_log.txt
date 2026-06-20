@@ -1,0 +1,11 @@
+--- before ---
+
+Image Name                     PID Session Name        Session#    Mem Usage
+========================= ======== ================ =========== ============
+cmd.exe                      44776 Console                    1      8,908 K
+--- killing ---
+SUCCESS: The process with PID 45648 (child process of PID 44776) has been terminated.
+SUCCESS: The process with PID 44776 (child process of PID 45380) has been terminated.
+kill_errorlevel: 0
+--- after ---
+INFO: No tasks are running which match the specified criteria.

@@ -1,0 +1,22 @@
+Classify this financial news headline into exactly one category and importance level.
+
+Categories:
+- REGULATORY_FDA (clinical trials, FDA approvals, CRL, phase data, breakthrough designation)
+- MERGER_ACQUISITION (buyouts, mergers, takeovers, strategic reviews, tender offers)
+- EARNINGS_PROJECTION (financial results, EPS, revenue, forward guidance)
+- DEAL_PARTNERSHIP (joint ventures, supply deals, government contracts, licensing)
+- SHORT_REPORT (short seller reports, fraud allegations, SEC investigation)
+- ANALYST_ACTION (initiations, upgrades, downgrades — NOT routine price target changes)
+- MANAGEMENT_CHANGE (CEO/CFO/board changes, activist investors)
+- NOISE (general market updates, routine analyst tier changes, technical levels)
+
+Importance levels:
+- HIGH: Binary event, major catalyst, unexpected development
+- LOW: Expected, routine, incremental
+- NOISE: Not actionable for single-stock trading
+
+Headline: {headline}
+Summary: {summary}
+
+Respond ONLY with raw JSON, no other text:
+{"category": "CATEGORY_NAME", "importance": "HIGH|LOW|NOISE"}

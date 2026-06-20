@@ -1,0 +1,103 @@
+--- processes matching main.py / uvicorn / alpaca-stream ---
+
+
+ProcessId   : 47332
+Name        : claude.exe
+CommandLine : C:\Users\ibrah\AppData\Roaming\Claude\claude-code\2.1.181\claude.exe --output-format stream-json 
+              --verbose --input-format stream-json --max-thinking-tokens 31999 --effort high --model claude-sonnet-4-6 
+              --permission-prompt-tool stdio --resume 22b0593e-6eac-4738-aca4-a17719d61cc6 --allowedTools Task,TaskCrea
+              te,TaskUpdate,TaskGet,TaskList,TaskStop,WebSearch,Skill,ToolSearch,mcp__mcp-registry__search_mcp_registry
+              ,mcp__mcp-registry__suggest_connectors,mcp__mcp-registry__list_connectors,mcp__plugins__search_plugins,mc
+              p__plugins__suggest_plugin_install,mcp__plugins__list_plugins,mcp__skills__list_skills,mcp__skills__sugge
+              st_skills,mcp__scheduled-tasks__list_scheduled_tasks,mcp__Framebuffer__framebuffer_list,mcp__Framebuffer_
+              _framebuffer_attach,mcp__Framebuffer__framebuffer_screenshot,mcp__Framebuffer__framebuffer_zoom,mcp__Fram
+              ebuffer__framebuffer_cursor_position,mcp__cowork__present_files,mcp__cowork__propose_skills,mcp__cowork__
+              list_artifacts,mcp__cowork__read_widget_context,mcp__session_info__list_sessions,mcp__session_info__read_
+              transcript,mcp__workspace__bash,Edit(//c/Users/ibrah/AppData/Roaming/Claude/local-agent-mode-sessions/19a
+              e75f7-3563-417f-bfe0-16a004e35cbc/9efebcc7-ea97-4b3e-b22e-4dcc933776f1/local_272048d3-7469-40d2-8d7a-5408
+              99541587/outputs/**),Read(//c/Users/ibrah/AppData/Roaming/Claude/local-agent-mode-sessions/19ae75f7-3563-
+              417f-bfe0-16a004e35cbc/9efebcc7-ea97-4b3e-b22e-4dcc933776f1/local_272048d3-7469-40d2-8d7a-540899541587/ou
+              tputs/**),Edit(//c/Users/ibrah/OneDrive/Documents/The100xTrade/cluade/alpaca-stream/**),Read(//c/Users/ib
+              rah/OneDrive/Documents/The100xTrade/cluade/alpaca-stream/**),Read(//c/Users/ibrah/AppData/Roaming/Claude/
+              local-agent-mode-sessions/19ae75f7-3563-417f-bfe0-16a004e35cbc/9efebcc7-ea97-4b3e-b22e-4dcc933776f1/local
+              _272048d3-7469-40d2-8d7a-540899541587/uploads/**),Read(//c/Users/ibrah/AppData/Roaming/Claude/local-agent
+              -mode-sessions/19ae75f7-3563-417f-bfe0-16a004e35cbc/9efebcc7-ea97-4b3e-b22e-4dcc933776f1/local_272048d3-7
+              469-40d2-8d7a-540899541587/.claude/projects/**/tool-results/**),Read(//c/Users/ibrah/AppData/Roaming/Clau
+              de/local-agent-mode-sessions/skills-plugin/9efebcc7-ea97-4b3e-b22e-4dcc933776f1/19ae75f7-3563-417f-bfe0-1
+              6a004e35cbc/**),Read(//c/Users/ibrah/AppData/Roaming/Claude/local-agent-mode-sessions/19ae75f7-3563-417f-
+              bfe0-16a004e35cbc/9efebcc7-ea97-4b3e-b22e-4dcc933776f1/rpm/plugin_0155zZVATbJU3jHUmPP9NvMC/**),Read(//c/U
+              sers/ibrah/OneDrive/Documents/Claude/Scheduled/weekday-market-brief/**),Read(//c/Users/ibrah/OneDrive/Doc
+              uments/Claude/Scheduled/small-cap-macro-news/**),Read(//c/Users/ibrah/OneDrive/Documents/Claude/Scheduled
+              /stock-market-morning-brief/**),Read(//c/Users/ibrah/OneDrive/Documents/Claude/Scheduled/stock-market-eod
+              -wrap/**),Read(//c/Users/ibrah/OneDrive/Documents/Claude/Scheduled/micro-nano-cap-digest-morning/**),Read
+              (//c/Users/ibrah/OneDrive/Documents/Claude/Scheduled/micro-nano-cap-digest-evening/**),Read(//c/Users/ibr
+              ah/OneDrive/Documents/Claude/Scheduled/daily-market-conference-briefing/**) --disallowedTools 
+              Bash,NotebookEdit,REPL,JavaScript,WebFetch --tools Task,Glob,Grep,Read,Edit,Write,TaskCreate,TaskUpdate,T
+              askGet,TaskList,TaskStop,WebSearch,Skill,AskUserQuestion,ToolSearch --setting-sources=user 
+              --permission-mode bypassPermissions --allow-dangerously-skip-permissions --include-partial-messages 
+              --add-dir C:\Users\ibrah\OneDrive\Documents\The100xTrade\cluade\alpaca-stream --plugin-dir C:\Users\ibrah
+              \AppData\Roaming\Claude\local-agent-mode-sessions\19ae75f7-3563-417f-bfe0-16a004e35cbc\9efebcc7-ea97-4b3e
+              -b22e-4dcc933776f1\rpm\plugin_0155zZVATbJU3jHUmPP9NvMC --plugin-dir C:\Users\ibrah\AppData\Roaming\Claude
+              \local-agent-mode-sessions\skills-plugin\9efebcc7-ea97-4b3e-b22e-4dcc933776f1\19ae75f7-3563-417f-bfe0-16a
+              004e35cbc --replay-user-messages
+
+ProcessId   : 44572
+Name        : cmd.exe
+CommandLine : C:\Windows\system32\cmd.exe /c 
+              ""C:\Users\ibrah\OneDrive\Documents\The100xTrade\cluade\alpaca-stream\check_local2.bat" "
+
+ProcessId   : 40200
+Name        : powershell.exe
+CommandLine : powershell  -NoProfile -ExecutionPolicy Bypass -File 
+              "C:\Users\ibrah\OneDrive\Documents\The100xTrade\cluade\alpaca-stream\check_local2.ps1" 
+
+
+
+--- listening ports ---
+
+LocalAddress  LocalPort OwningProcess
+------------  --------- -------------
+0.0.0.0             135          1332
+::                  135          1332
+192.168.1.165       139             4
+::                  445             4
+::                 1462             4
+::                 2869             4
+0.0.0.0            5040          4440
+::                 5357             4
+::                 7680          5708
+127.0.0.1          9080          6632
+::1               12025          5328
+127.0.0.1         12025          5328
+::1               12110          5328
+127.0.0.1         12110          5328
+127.0.0.1         12119          5328
+::1               12119          5328
+127.0.0.1         12143          5328
+::1               12143          5328
+127.0.0.1         12465          5328
+::1               12465          5328
+127.0.0.1         12563          5328
+::1               12563          5328
+127.0.0.1         12993          5328
+::1               12993          5328
+::1               12995          5328
+127.0.0.1         12995          5328
+127.0.0.1         26822         13720
+127.0.0.1         32683         10828
+127.0.0.1         33683         10828
+::1               42050         19324
+::                49664          1852
+0.0.0.0           49664          1852
+::                49665          1776
+0.0.0.0           49665          1776
+::                49666          2824
+0.0.0.0           49666          2824
+::                49667          4136
+0.0.0.0           49667          4136
+::                49668          5888
+0.0.0.0           49668          5888
+::                49669          1824
+0.0.0.0           49669          1824
+
+

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The100xTrade — Architecture &amp; Data Flow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 12px;
+    padding: 28px 32px 60px;
+  }
+
+  h1 {
+    font-size: 17px; font-weight: 700; color: #58a6ff;
+    letter-spacing: .5px; margin-bottom: 4px;
+  }
+  .subtitle { font-size: 11px; color: #8b949e; margin-bottom: 28px; }
+
+  /* ── Layer wrappers ─────────────────────────────────────────── */
+  .layer {
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    margin-bottom: 0;
+    position: relative;
+  }
+  .layer-title {
+    position: absolute; top: -11px; left: 16px;
+    background: #0d1117;
+    padding: 0 8px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .layer-inner { padding: 18px 16px 14px; }
+
+  /* ── Connector arrows between layers ───────────────────────── */
+  .connector {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; height: 36px; position: relative;
+  }
+  .conn-line {
+    width: 2px; height: 100%;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 0;
+  }
+  .conn-stem { flex: 1; width: 2px; }
+  .conn-arrow { font-size: 14px; line-height: 1; }
+  .conn-label {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    background: #0d1117; padding: 0 8px;
+    font-size: 10px; color: #8b949e; white-space: nowrap;
+    top: 50%; transform: translate(-50%, -50%);
+  }
+
+  /* ── Box styles ─────────────────────────────────────────────── */
+  .box {
+    border-radius: 7px; padding: 8px 12px;
+    font-size: 11px; line-height: 1.5;
+  }
+  .box-title {
+    font-size: 11px; font-weight: 700; margin-bottom: 3px;
+  }
+  .box-sub { font-size: 10px; color: #8b949e; }
+
+  /* ── Row / flex helpers ─────────────────────────────────────── */
+  .row { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+  .row.center { justify-content: center; }
+  .row.stretch { align-items: stretch; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .grow { flex: 1; }
+  .shrink { flex-shrink: 0; }
+
+  /* ── Colour themes ──────────────────────────────────────────── */
+  .theme-blue   { background: #1a2a3a; border: 1px solid #2a4a6a; }
+  .theme-green  { background: #1a3a1a; border: 1px solid #2a6a2a; }
+  .theme-red    { background: #3a1a1a; border: 1px solid #6a2a2a; }
+  .theme-yellow { background: #3a3a1a; border: 1px solid #6a6a2a; }
+  .theme-purple { background: #2a1a3a; border: 1px solid #5a2a8a; }
+  .theme-teal   { background: #1a3a3a; border: 1px solid #2a7a6a; }
+  .theme-dark   { background: #161b22; border: 1px solid #30363d; }
+  .theme-orange { background: #3a2a0a; border: 1px solid #7a5a1a; }
+
+  .c-blue   { color: #58a6ff; }
+  .c-green  { color: #3fb950; }
+  .c-red    { color: #f85149; }
+  .c-yellow { color: #e3b341; }
+  .c-purple { color: #bc8cff; }
+  .c-teal   { color: #39d353; }
+  .c-dim    { color: #8b949e; }
+  .c-orange { color: #e8a060; }
+  .c-text   { color: #e6edf3; }
+
+  /* ── Section dividers ───────────────────────────────────────── */
+  .divider {
+    display: flex; align-items: center; gap: 10px;
+    margin: 20px 0 14px;
+  }
+  .divider-line { flex: 1; height: 1px; background: #21262d; }
+  .divider-label {
+    font-size: 10px; font-weight: 700; color: #8b949e;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  /* ── Arrow between sub-components ──────────────────────────── */
+  .arr-right { color: #58a6ff; margin: 0 4px; font-size: 13px; }
+  .arr-down  { color: #58a6ff; font-size: 13px; display: block; text-align: center; margin: 3px 0; }
+
+  /* ── Tag badge ──────────────────────────────────────────────── */
+  .badge {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    font-size: 9px; font-weight: 700; margin: 1px;
+  }
+  .badge-blue   { background: rgba(88,166,255,.14); color: #58a6ff; border: 1px solid rgba(88,166,255,.3); }
+  .badge-green  { background: rgba(63,185,80,.14);  color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+  .badge-yellow { background: rgba(227,179,65,.14); color: #e3b341; border: 1px solid rgba(227,179,65,.3); }
+  .badge-red    { background: rgba(248,81,73,.14);  color: #f85149; border: 1px solid rgba(248,81,73,.3); }
+  .badge-purple { background: rgba(188,140,255,.14);color: #bc8cff; border: 1px solid rgba(188,140,255,.3); }
+  .badge-teal   { background: rgba(57,211,83,.14);  color: #39d353; border: 1px solid rgba(57,211,83,.3); }
+  .badge-orange { background: rgba(232,160,96,.14); color: #e8a060; border: 1px solid rgba(232,160,96,.3); }
+  .badge-dim    { background: rgba(139,148,158,.10);color: #8b949e; border: 1px solid rgba(139,148,158,.2); }
+
+  /* ── Flow step numbers ──────────────────────────────────────── */
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(88,166,255,.2); color: #58a6ff;
+    font-size: 9px; font-weight: 800; flex-shrink: 0;
+  }
+
+  /* ── Small inline arrow ─────────────────────────────────────── */
+  .flow-arrow {
+    display: flex; align-items: center; justify-content: center;
+    color: #30363d; font-size: 18px; padding: 0 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── Detection algorithm columns ───────────────────────────── */
+  .detect-col {
+    flex: 1; border-radius: 8px; padding: 12px 10px; min-width: 160px;
+  }
+  .detect-title {
+    font-size: 11px; font-weight: 800; margin-bottom: 8px;
+    letter-spacing: .4px;
+  }
+  .detect-step {
+    display: flex; align-items: flex-start; gap: 6px;
+    margin-bottom: 5px; font-size: 10px;
+  }
+
+  /* ── Panel display boxes ────────────────────────────────────── */
+  .panel-box {
+    flex: 1; border-radius: 7px; padding: 8px 10px;
+    border: 1px solid;  min-width: 110px; text-align: center;
+  }
+  .panel-icon { font-size: 16px; display: block; margin-bottom: 3px; }
+  .panel-name { font-size: 10px; font-weight: 700; display: block; }
+  .panel-src  { font-size: 9px; color: #8b949e; display: block; margin-top: 2px; }
+
+  /* ── Legend ─────────────────────────────────────────────────── */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 28px; padding-top: 16px; border-top: 1px solid #21262d; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #8b949e; }
+  .legend-box  { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  /* ── Note ───────────────────────────────────────────────────── */
+  .note {
+    font-size: 10px; color: #8b949e; background: #161b22;
+    border: 1px solid #30363d; border-radius: 6px;
+    padding: 6px 10px; line-height: 1.6; margin-top: 8px;
+  }
+
+  hr.thin { border: none; border-top: 1px solid #21262d; margin: 18px 0; }
+
+  .vert-connector {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 4px 0;
+  }
+  .vc-line { width: 2px; flex: 1; background: #30363d; min-height: 10px; }
+  .vc-dot  { width: 6px; height: 6px; border-radius: 50%; background: #58a6ff; }
+</style>
+</head>
+<body>
+
+<h1>The100xTrade — Architecture &amp; Data Flow</h1>
+<p class="subtitle">Live Trade Dashboard · FastAPI backend · WebSocket · SQLite · Alpaca SIP Feed</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LAYER 1 — EXTERNAL DATA SOURCES
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="layer">
+  <span class="layer-title c-dim">Layer 1 · External Data Sources</span>
+  <div class="layer-inner">
+    <div class="row center" style="gap:10px">
+
+      <div class="box theme-blue grow">
+        <div class="box-title c-blue">⚡ Alpaca SIP Feed</div>
+        <div class="box-sub">All US equity trade prints<br>WebSocket · real-time · ~thousands/sec</div>
+        <div style="margin-top:5px">
+          <span class="badge badge-blue">StockDataStream</span>
+          <span class="badge badge-dim">SIP feed</span>
+          <span class="badge badge-dim">all exchanges</span>
+        </div>
+      </div>
+
+      <div class="box theme-blue grow">
+        <div class="box-title c-blue">📰 Alpaca News Feed</div>
+        <div class="box-sub">Live news stream + 7-day REST history<br>NewsDataStream · NewsClient</div>
+        <div style="margin-top:5px">
+          <span class="badge badge-blue">NewsDataStream</span>
+          <span class="badge badge-dim">REST /news</span>
+        </div>
+      </div>
+
+      <div class="box theme-purple grow">
+        <div class="box-title c-purple">📊 Alpaca Options API</div>
+        <div class="box-sub">Options chain snapshots on demand<br>REST · v1beta1/options/snapshots</div>
+        <div style="margin-top:5px">
+          <span class="badge badge-purple">per-stock pull</span>
+          <span class="badge badge-dim">5-min cache</span>
+        </div>
+      </div>
+
+      <div class="box theme-teal grow">
+        <div class="box-title c-teal">📋 Google Sheets</div>
+        <div class="box-sub">Stock tags (earnings, sector, notes)<br>CSV export URL · synced every 15 min</div>
+        <div style="margin-top:5px">
+          <span class="badge badge-teal">STOCK_TAGS dict</span>
+          <span class="badge badge-dim">15-min scheduler</span>
+        </div>
+      </div>
+
+      <div class="box theme-orange grow">
+        <div class="box-title c-orange">📈 yfinance / Finnhub</div>
+        <div class="box-sub">Market cap enrichment for tier classification<br>Startup background thread · cached to JSON</div>
+        <div style="margin-top:5px">
+          <span class="badge badge-orange">finnhub_marketcap_cache.json</span>
+        </div>
+      </div>
+
+      <div class="box theme-dark grow">
+        <div class="box-title c-dim">🐦 xAI / Grok</div>
+        <div class="box-sub">Twitter / X sentiment on demand<br>REST · per-ticker · 1-hr cache</div>
+        <div style="margin-top:5px">
+          <span class="badge badge-dim">on user click</span>
+          <span class="badge badge-dim">twitterCache{}</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- connector -->
+<div class="connector">
+  <div style="display:flex;flex-direction:column;align-items:center;width:100%;gap:0">
+    <div style="display:flex;justify-content:space-around;width:100%;margin-bottom:-1px">
+      <div style="width:2px;height:18px;background:#2a4a6a"></div>
+      <div style="width:2px;height:18px;background:#2a4a6a"></div>
+      <div style="width:2px;height:18px;background:#5a2a8a"></div>
+      <div style="width:2px;height:18px;background:#2a7a6a"></div>
+      <div style="width:2px;height:18px;background:#7a5a1a"></div>
+      <div style="width:2px;height:18px;background:#30363d"></div>
+    </div>
+    <div style="width:100%;height:1px;background:#21262d;margin:0 0"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LAYER 2 — BACKEND (FastAPI)
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="layer" style="border-color:#2a4a6a">
+  <span class="layer-title c-blue">Layer 2 · Backend — FastAPI / main.py</span>
+  <div class="layer-inner">
+
+    <!-- Top row: threads + queues + processor -->
+    <div class="row stretch" style="gap:10px;margin-bottom:10px">
+
+      <!-- Trade pipeline -->
+      <div class="box theme-blue" style="flex:2">
+        <div class="box-title c-blue" style="margin-bottom:8px">Trade Pipeline</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="box theme-dark" style="flex:1;min-width:110px">
+            <div class="box-title c-dim" style="font-size:10px">Trade Stream Thread</div>
+            <div class="box-sub">StockDataStream<br>SIP · reconnect loop</div>
+          </div>
+          <div class="arr-right">→</div>
+          <div class="box theme-dark" style="flex:1;min-width:100px">
+            <div class="box-title c-yellow" style="font-size:10px">trade_queue</div>
+            <div class="box-sub">Queue(100K)<br>thread-safe</div>
+          </div>
+          <div class="arr-right">→</div>
+          <div class="box theme-yellow" style="flex:1.4;min-width:120px">
+            <div class="box-title c-yellow" style="font-size:10px">queue_processor()</div>
+            <div class="box-sub">asyncio loop<br>batches every 20ms<br>aggregate_tick() → bars<br>broadcast() to WS clients</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- News pipeline -->
+      <div class="box theme-dark" style="flex:1">
+        <div class="box-title c-dim" style="margin-bottom:8px">News Pipeline</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <div class="box theme-dark" style="flex:1">
+            <div class="box-title c-dim" style="font-size:10px">News Stream Thread</div>
+            <div class="box-sub">NewsDataStream<br>news_queue → broadcast</div>
+          </div>
+          <div class="arr-right">→</div>
+          <div class="box theme-dark" style="flex:1">
+            <div class="box-title c-dim" style="font-size:10px">news_store</div>
+            <div class="box-sub">deque(200) per sym<br>7-day REST fallback</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- REST API endpoints row -->
+    <div class="box theme-dark" style="margin-bottom:10px">
+      <div class="box-title c-blue" style="margin-bottom:7px">REST API Endpoints</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:130px">
+          <div class="badge badge-blue">/bars/{sym}</div>
+          <div class="badge badge-blue">/news/{sym}</div>
+          <div class="badge badge-blue">/options/{sym}</div>
+          <div class="badge badge-blue">/twitter/{sym}</div>
+          <div class="box-sub" style="margin-top:3px">On-demand data</div>
+        </div>
+        <div style="flex:1;min-width:130px">
+          <div class="badge badge-teal">/tags</div>
+          <div class="badge badge-teal">/tags/user/add</div>
+          <div class="badge badge-teal">/tags/user/remove</div>
+          <div class="badge badge-teal">/tags/refresh</div>
+          <div class="box-sub" style="margin-top:3px">Tag management</div>
+        </div>
+        <div style="flex:1;min-width:130px">
+          <div class="badge badge-yellow">/universe/meta</div>
+          <div class="badge badge-yellow">/universe/refresh</div>
+          <div class="badge badge-yellow">/suppressed/{sym}</div>
+          <div class="badge badge-yellow">/yesterday/top</div>
+          <div class="box-sub" style="margin-top:3px">Universe &amp; config</div>
+        </div>
+        <div style="flex:1;min-width:130px">
+          <div class="badge badge-dim">/log/alert  (POST)</div>
+          <div class="badge badge-dim">/log/alerts  (GET)</div>
+          <div class="badge badge-dim">/breaking-news</div>
+          <div class="badge badge-dim">/api/stats</div>
+          <div class="box-sub" style="margin-top:3px">Logging &amp; misc</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Storage row -->
+    <div class="row" style="gap:10px">
+      <div class="box theme-dark grow">
+        <div class="box-title c-dim" style="margin-bottom:5px">💾 Persistent Storage</div>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:120px">
+            <span class="badge badge-dim">alerts.db (SQLite)</span>
+            <div class="box-sub">All alert history — permanent</div>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <span class="badge badge-dim">user_tags.json</span>
+            <div class="box-sub">User-added stock tags</div>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <span class="badge badge-dim">stock_universe_full.csv</span>
+            <div class="box-sub">Ticker universe + market caps</div>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <span class="badge badge-dim">yesterday_volume.json</span>
+            <div class="box-sub">EOD vol baseline for spike calc</div>
+          </div>
+          <div style="flex:1;min-width:140px">
+            <span class="badge badge-dim">finnhub_marketcap_cache.json</span>
+            <div class="box-sub">Enriched market caps</div>
+          </div>
+        </div>
+      </div>
+      <div class="box theme-orange shrink" style="min-width:150px">
+        <div class="box-title c-orange">📱 Pulszy</div>
+        <div class="box-sub">Push notifications<br>REST · JWT auth<br>Triggered on<br>vol/sweep/move alerts</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- connector: WS down + REST up -->
+<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 60px;height:48px;position:relative">
+  <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:#21262d"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;z-index:1;background:#0d1117;padding:0 8px">
+    <div style="width:2px;height:14px;background:#39d353"></div>
+    <div style="font-size:14px;color:#39d353">▼</div>
+    <div style="font-size:9px;color:#39d353;white-space:nowrap">WebSocket broadcast</div>
+    <div style="font-size:9px;color:#8b949e;white-space:nowrap">~20ms batches</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;z-index:1;background:#0d1117;padding:0 8px">
+    <div style="font-size:9px;color:#8b949e;white-space:nowrap">REST calls</div>
+    <div style="font-size:14px;color:#58a6ff">▲</div>
+    <div style="width:2px;height:14px;background:#58a6ff"></div>
+    <div style="font-size:9px;color:#58a6ff;white-space:nowrap">/bars /news /tags /options</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LAYER 3 — FRONTEND TICK ROUTER
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="layer" style="border-color:#2a6a2a">
+  <span class="layer-title c-green">Layer 3 · Frontend Tick Router — processBatch()</span>
+  <div class="layer-inner">
+
+    <div class="row stretch" style="gap:10px">
+
+      <!-- Input -->
+      <div class="box theme-dark" style="flex:0 0 160px">
+        <div class="box-title c-teal">Incoming Batch</div>
+        <div class="box-sub">trades[] from WS<br>symbol · price · size<br>conditions[] · exchange<br>ts_ms</div>
+        <div style="margin-top:6px">
+          <div style="font-size:10px;color:#8b949e">Each tick goes through<br>5 checks in order →</div>
+        </div>
+      </div>
+
+      <div class="arr-right" style="align-self:center;font-size:20px">→</div>
+
+      <!-- Filter steps -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="step-num">1</span>
+          <div class="box theme-red grow" style="padding:5px 10px">
+            <span class="c-red" style="font-weight:700">Stale check</span>
+            <span class="c-dim"> · ts_ms &lt; now − 5min → </span>
+            <span class="badge badge-red">DROP</span>
+            <span class="box-sub"> (fires on WS reconnect replay only)</span>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="step-num">2</span>
+          <div class="box theme-red grow" style="padding:5px 10px">
+            <span class="c-red" style="font-weight:700">Large-cap check</span>
+            <span class="c-dim"> · symbol ∈ LARGE_CAP_EXCLUDE → </span>
+            <span class="badge badge-red">DROP</span>
+            <span class="box-sub"> (AAPL/MSFT/SPY/QQQ/ETFs etc)</span>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="step-num">3</span>
+          <div class="box theme-red grow" style="padding:5px 10px">
+            <span class="c-red" style="font-weight:700">Bad condition check</span>
+            <span class="c-dim"> · conditions[].has('M' or 'Q') → </span>
+            <span class="badge badge-red">DROP</span>
+            <span class="box-sub"> (MOC/official-close auction prints)</span>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="step-num">4</span>
+          <div class="box theme-yellow grow" style="padding:5px 10px">
+            <span class="c-yellow" style="font-weight:700">ISO check</span>
+            <span class="c-dim"> · conditions[].has('F') → </span>
+            <span class="badge badge-yellow">sweepAcc[sym]</span>
+            <span class="box-sub"> · accumulate val, prices[], sizes[], prePrice</span>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="step-num">5</span>
+          <div class="box theme-green grow" style="padding:5px 10px">
+            <span class="c-green" style="font-weight:700">Normal tick</span>
+            <span class="c-dim"> → </span>
+            <span class="badge badge-green">symbolData[sym]</span>
+            <span class="c-dim"> push {x:ts_ms, y:price, sz:size} · update lastNonFPrice</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Outputs -->
+      <div class="arr-right" style="align-self:center;font-size:20px">→</div>
+
+      <div style="flex:0 0 160px;display:flex;flex-direction:column;gap:8px">
+        <div class="box theme-green" style="flex:1">
+          <div class="box-title c-teal" style="font-size:10px">symbolData Map</div>
+          <div class="box-sub">sym → [{x,y,sz}]<br>5-min rolling window<br>all passing ticks</div>
+        </div>
+        <div class="box theme-yellow" style="flex:1">
+          <div class="box-title c-yellow" style="font-size:10px">sweepAcc{}</div>
+          <div class="box-sub">per-batch ISO accum<br>flushed end of batch<br>→ sweepDirection()</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Post-batch flush note -->
+    <div class="note" style="margin-top:10px">
+      ⚡ <strong>After each batch:</strong> for every sym in sweepAcc → call <code style="color:#e3b341">sweepDirection(acc)</code>
+      to score direction &amp; confidence → fire <code style="color:#e3b341">handleSweepAlert()</code>.
+      sweepAcc is cleared on next batch.
+    </div>
+
+  </div>
+</div>
+
+<!-- connector -->
+<div style="display:flex;justify-content:space-around;height:28px;padding-top:4px">
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:2px;flex:1;background:#e86060"></div><div style="font-size:12px;color:#e86060">▼</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:2px;flex:1;background:#e3b341"></div><div style="font-size:12px;color:#e3b341">▼</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:2px;flex:1;background:#3fb950"></div><div style="font-size:12px;color:#3fb950">▼</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LAYER 4 — DETECTION ALGORITHMS
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="layer" style="border-color:#3a3a2a">
+  <span class="layer-title c-yellow">Layer 4 · Detection Algorithms — run on every bar update</span>
+  <div class="layer-inner">
+    <div class="row stretch" style="gap:12px">
+
+      <!-- Vol Spike -->
+      <div class="detect-col theme-red">
+        <div class="detect-title c-red">⚡ Vol Spike</div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(248,81,73,.2);color:#f85149">1</span><span><strong>Split window</strong> — 1-min vs 4-min baseline</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(248,81,73,.2);color:#f85149">2</span><span>vol_1m = Σ(price×size) last 60s</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(248,81,73,.2);color:#f85149">3</span><span>basePerMin = vol_4m / 4</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(248,81,73,.2);color:#f85149">4</span><span>If basePerMin &gt; 0: <br>ratio = vol_1m / basePerMin<br>≥ tier.spike → <strong>SPIKE</strong></span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(248,81,73,.2);color:#f85149">5</span><span>If basePerMin = 0: <strong>NEW ACTIVITY</strong> (∞)</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(248,81,73,.2);color:#f85149">6</span><span>volSpikeCache → 5-min TTL</span></div>
+        <hr class="thin">
+        <div style="font-size:10px;color:#8b949e">Input: <span class="c-teal">symbolData</span></div>
+        <div style="font-size:10px;color:#8b949e">Output: <span class="badge badge-red">volAlerts[]</span></div>
+        <div style="font-size:10px;color:#8b949e;margin-top:3px">Tier thresholds:<br>
+          <span class="badge badge-dim">nano 10× $10K 8%</span><br>
+          <span class="badge badge-dim">small 8× $40K 5%</span><br>
+          <span class="badge badge-dim">mid 5× $100K 3%</span>
+        </div>
+      </div>
+
+      <!-- Sweep -->
+      <div class="detect-col theme-yellow">
+        <div class="detect-title c-yellow">🎯 Sweep + Confidence</div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(227,179,65,.2);color:#e3b341">1</span><span>sweepAcc flushed end-of-batch</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(227,179,65,.2);color:#e3b341">2</span><span><strong>Signal 1</strong> (45%): intra-sweep price trend<br>lastPrice vs firstPrice</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(227,179,65,.2);color:#e3b341">3</span><span><strong>Signal 2</strong> (35%): VWAP vs prePrice<br>(clean ref before sweep)</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(227,179,65,.2);color:#e3b341">4</span><span><strong>Signal 3</strong> (20%): upTicks vs downTicks</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(227,179,65,.2);color:#e3b341">5</span><span>Weighted vote → bull/bear/neutral</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(227,179,65,.2);color:#e3b341">6</span><span>Confidence 0-99: A(move 35) + B(agree 30) + C(ticks 20) + D(consistency 14)</span></div>
+        <hr class="thin">
+        <div style="font-size:10px;color:#8b949e">Input: <span class="c-yellow">sweepAcc{}</span></div>
+        <div style="font-size:10px;color:#8b949e">Output: <span class="badge badge-yellow">sweepAlerts[]</span></div>
+        <div style="font-size:10px;color:#8b949e;margin-top:3px">$ thresholds:<br>
+          <span class="badge badge-dim">nano $10K direct / $50K voice</span><br>
+          <span class="badge badge-dim">small $25K / $100K</span><br>
+          <span class="badge badge-dim">mid $75K / $250K</span>
+        </div>
+      </div>
+
+      <!-- Move % -->
+      <div class="detect-col theme-green">
+        <div class="detect-title c-green">🔥 Move % Bull / Bear</div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(63,185,80,.2);color:#3fb950">1</span><span>rows[] from server aggregates</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(63,185,80,.2);color:#3fb950">2</span><span>Qualify: |Δ%| ≥ tier.delta<br>&amp;&amp; val ≥ tier.valK<br>&amp;&amp; trades ≥ tier.trades</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(63,185,80,.2);color:#3fb950">3</span><span>Skip suppressedSyms</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(63,185,80,.2);color:#3fb950">4</span><span>New entry → auto-select chart + log 'new'</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(63,185,80,.2);color:#3fb950">5</span><span>Escalation: Δ ≥ 1.5× prev &amp;&amp; ≥ 2× threshold → log 'escalation'</span></div>
+        <div class="detect-step"><span class="step-num" style="background:rgba(63,185,80,.2);color:#3fb950">6</span><span>5-min TTL from firstTs (hard)</span></div>
+        <hr class="thin">
+        <div style="font-size:10px;color:#8b949e">Input: <span class="c-teal">symbolData</span> aggregates</div>
+        <div style="font-size:10px;color:#8b949e">Output: <span class="badge badge-green">alertHistory Map</span></div>
+        <div style="font-size:10px;color:#8b949e;margin-top:3px">Qual thresholds:<br>
+          <span class="badge badge-dim">nano bull 4% $20K 1tr</span><br>
+          <span class="badge badge-dim">nano bear 6% $20K 2tr</span><br>
+          <span class="badge badge-dim">mid bull 2% $1M 1tr</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Control Panel feeds in -->
+    <div class="note" style="margin-top:12px;border-color:#5a2a8a">
+      <span class="c-purple">⚙ Control Panel</span> (localStorage: <code style="color:#bc8cff">tierConfig</code> + <code style="color:#bc8cff">sweepConfig</code>)
+      feeds threshold values into <strong>all three</strong> detectors at runtime.
+      Changes take effect on next detection cycle without page reload.
+      Tier boundaries (maxCapM), spike multipliers, delta %, valK, trades, flashM, sweep $K thresholds — all user-tunable.
+    </div>
+
+  </div>
+</div>
+
+<!-- connector -->
+<div style="display:flex;justify-content:space-around;height:28px;padding-top:4px">
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:2px;flex:1;background:#f85149"></div><div style="font-size:12px;color:#f85149">▼</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:2px;flex:1;background:#e3b341"></div><div style="font-size:12px;color:#e3b341">▼</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:2px;flex:1;background:#3fb950"></div><div style="font-size:12px;color:#3fb950">▼</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LAYER 5 — DISPLAY
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="layer" style="border-color:#5a2a8a">
+  <span class="layer-title c-purple">Layer 5 · Display Panels</span>
+  <div class="layer-inner">
+    <div class="row" style="gap:10px;flex-wrap:wrap">
+
+      <div class="panel-box theme-red" style="border-color:#6a2a2a">
+        <span class="panel-icon">⚡</span>
+        <span class="panel-name c-red">VOL SPIKES</span>
+        <span class="panel-src">volAlerts[]<br>5-min TTL<br>tier badge · ×ratio</span>
+      </div>
+
+      <div class="panel-box theme-yellow" style="border-color:#6a6a2a">
+        <span class="panel-icon">🎯</span>
+        <span class="panel-name c-yellow">SWEEPS</span>
+        <span class="panel-src">sweepAlerts[]<br>bull/bear conf %<br>$ value colored</span>
+      </div>
+
+      <div class="panel-box theme-green" style="border-color:#2a6a2a">
+        <span class="panel-icon">🔥</span>
+        <span class="panel-name c-green">MOVES</span>
+        <span class="panel-src">alertHistory Map<br>green=bull · red=bear<br>sorted by |Δ%|</span>
+      </div>
+
+      <div class="panel-box theme-blue" style="border-color:#2a4a6a">
+        <span class="panel-icon">📋</span>
+        <span class="panel-name c-blue">HISTORY</span>
+        <span class="panel-src">SQLite alerts.db<br>all sweeps + moves<br>filterable by sym</span>
+      </div>
+
+      <div class="panel-box theme-teal" style="border-color:#2a7a6a">
+        <span class="panel-icon">📈</span>
+        <span class="panel-name c-teal">PRICE CHART</span>
+        <span class="panel-src">Chart.js<br>/bars/{sym} REST<br>1-min candles</span>
+      </div>
+
+      <div class="panel-box theme-purple" style="border-color:#5a2a8a">
+        <span class="panel-icon">📊</span>
+        <span class="panel-name c-purple">OPTIONS</span>
+        <span class="panel-src">/options/{sym}<br>IV rank · P/C ratio<br>strikes · max pain</span>
+      </div>
+
+      <div class="panel-box theme-dark" style="border-color:#30363d">
+        <span class="panel-icon">📰</span>
+        <span class="panel-name c-dim">NEWS</span>
+        <span class="panel-src">/news/{sym}<br>7-day · live stream<br>collapsible dropdown</span>
+      </div>
+
+      <div class="panel-box theme-teal" style="border-color:#2a7a5a">
+        <span class="panel-icon">🏷</span>
+        <span class="panel-name c-teal">TAG BAR</span>
+        <span class="panel-src">G-Sheet tags (read-only)<br>+ user tags (add/del)<br>persisted: JSON + localStorage</span>
+      </div>
+
+    </div>
+
+    <!-- Cross-column filter note -->
+    <div class="note" style="margin-top:12px;border-color:#2a4a6a">
+      <span class="c-blue">🔗 Cross-column filter</span> — clicking any ticker in any panel sets <code style="color:#58a6ff">activeColFilter</code>,
+      instantly filtering <strong>all 4 data columns</strong> (Vol · Sweep · Moves · History) + loading chart + options + news for that symbol.
+      <span class="c-blue">✕ Clear</span> resets to unfiltered view.
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LEGEND
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-box" style="background:#2a4a6a;border:1px solid #58a6ff"></div>External / Backend</div>
+  <div class="legend-item"><div class="legend-box" style="background:#1a3a1a;border:1px solid #3fb950"></div>Normal tick path</div>
+  <div class="legend-item"><div class="legend-box" style="background:#3a1a1a;border:1px solid #f85149"></div>Dropped / Vol spike</div>
+  <div class="legend-item"><div class="legend-box" style="background:#3a3a1a;border:1px solid #e3b341"></div>Sweep / ISO path</div>
+  <div class="legend-item"><div class="legend-box" style="background:#2a1a3a;border:1px solid #bc8cff"></div>Display / Control panel</div>
+  <div class="legend-item"><div class="legend-box" style="background:#1a3a3a;border:1px solid #39d353"></div>Tags / Chart</div>
+  <div class="legend-item"><div class="legend-box" style="background:#3a2a0a;border:1px solid #e8a060"></div>Market cap enrichment / Dark pool</div>
+  <span style="margin-left:auto;font-size:10px;color:#30363d">The100xTrade · Live Dashboard Architecture</span>
+</div>
+
+</body>
+</html>

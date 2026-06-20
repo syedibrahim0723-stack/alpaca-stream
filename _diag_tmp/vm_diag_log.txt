@@ -1,0 +1,38 @@
+=== Sat 06/20/2026 12:33:17.55 ===
+--- where gcloud ---
+C:\Users\ibrah\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud
+C:\Users\ibrah\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd
+where_errorlevel: 0
+--- gcloud --version ---
+Google Cloud SDK 573.0.0
+bq 2.1.32
+core 2026.06.12
+gcloud-crc32c 1.0.0
+gsutil 5.37
+version_errorlevel: !errorlevel!
+--- gcloud config list ---
+[accessibility]
+screen_reader = True
+[compute]
+region = us-east1
+zone = us-east1-b
+[core]
+account = syed.ibrahim0723@gmail.com
+disable_usage_reporting = False
+project = project-062a1e95-5575-43f3-adf
+
+Your active configuration is: [default]
+--- setting project ---
+[environment: untagged] Read more to tag: g.co/cloud/project-env-tag.
+Updated property [core/project].
+set_project_errorlevel: !errorlevel!
+--- starting VM ---
+Starting instance(s) instance-20260402-210914...
+............done.
+Updated [https://compute.googleapis.com/compute/v1/projects/project-062a1e95-5575-43f3-adf/zones/us-central1-a/instances/instance-20260402-210914].
+Instance internal IP is 10.128.0.2
+Instance external IP is 34.173.122.106
+start_errorlevel: !errorlevel!
+--- instance status ---
+RUNNING
+=== DONE ===

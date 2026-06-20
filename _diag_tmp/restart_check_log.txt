@@ -1,0 +1,46 @@
+● alpaca-stream.service - Alpaca Live Stream
+     Loaded: loaded (/etc/systemd/system/alpaca-stream.service; enabled; preset: enabled)
+     Active: active (running) since Sat 2026-06-20 17:04:14 UTC; 8s ago
+   Main PID: 17995 (uvicorn)
+      Tasks: 13 (limit: 19173)
+     Memory: 127.0M
+        CPU: 2.303s
+     CGroup: /system.slice/alpaca-stream.service
+             └─17995 /opt/alpaca-stream/venv/bin/python3 /opt/alpaca-stream/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --ws-ping-interval 0 --ws-ping-timeout 0
+
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: ValueError: connection limit exceeded
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: error during websocket communication: connection limit exceeded
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: Traceback (most recent call last):
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 343, in _run_forever
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     await self._start_ws()
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 135, in _start_ws
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     await self._auth()
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 126, in _auth
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     raise ValueError(msg[0].get("msg", "auth failed"))
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: ValueError: connection limit exceeded
+----RECENT-LOG----
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 343, in _run_forever
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     await self._start_ws()
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 135, in _start_ws
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     await self._auth()
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 126, in _auth
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     raise ValueError(msg[0].get("msg", "auth failed"))
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: ValueError: connection limit exceeded
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: error during websocket communication: connection limit exceeded
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: Traceback (most recent call last):
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 343, in _run_forever
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     await self._start_ws()
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 135, in _start_ws
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     await self._auth()
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 126, in _auth
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     raise ValueError(msg[0].get("msg", "auth failed"))
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: ValueError: connection limit exceeded
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: error during websocket communication: connection limit exceeded
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: Traceback (most recent call last):
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 343, in _run_forever
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     await self._start_ws()
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 135, in _start_ws
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     await self._auth()
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:   File "/opt/alpaca-stream/venv/lib/python3.11/site-packages/alpaca/data/live/websocket.py", line 126, in _auth
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]:     raise ValueError(msg[0].get("msg", "auth failed"))
+Jun 20 17:04:20 instance-20260402-210914 uvicorn[17995]: ValueError: connection limit exceeded

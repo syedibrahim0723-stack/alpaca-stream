@@ -1,0 +1,42 @@
+--- cmd / gcloud / plink / python processes ---
+
+
+ProcessId   : 4472
+Name        : conhost.exe
+CommandLine : 
+
+ProcessId   : 25128
+Name        : conhost.exe
+CommandLine : \??\C:\Windows\system32\conhost.exe 0x4
+
+ProcessId   : 48196
+Name        : conhost.exe
+CommandLine : \\?\C:\Windows\system32\conhost.exe --headless --width 80 --height 24 --signal 0x1688 --server 0x13dc
+
+ProcessId   : 48924
+Name        : conhost.exe
+CommandLine : \\?\C:\Windows\system32\conhost.exe --headless --width 80 --height 24 --signal 0xa54 --server 0x172c
+
+ProcessId   : 44776
+Name        : cmd.exe
+CommandLine : cmd.exe /k ""C:\Users\ibrah\AppData\Local\Google\Cloud SDK\cloud_env.bat" && gcloud init"
+
+ProcessId   : 45648
+Name        : conhost.exe
+CommandLine : \??\C:\Windows\system32\conhost.exe 0x4
+
+ProcessId   : 38068
+Name        : conhost.exe
+CommandLine : \??\C:\Windows\system32\conhost.exe 0x4
+
+ProcessId   : 28576
+Name        : cmd.exe
+CommandLine : C:\Windows\system32\cmd.exe /c 
+              ""C:\Users\ibrah\OneDrive\Documents\The100xTrade\cluade\alpaca-stream\check_running.bat" "
+
+ProcessId   : 41924
+Name        : conhost.exe
+CommandLine : \??\C:\Windows\system32\conhost.exe 0x4
+
+
+

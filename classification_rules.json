@@ -1,0 +1,21 @@
+{
+  "noise_keywords": [
+    "price target", "reiterates", "maintains rating", "maintains overweight",
+    "maintains underweight", "top gainers", "top losers", "most active",
+    "52-week high", "52-week low", "crosses above", "crosses below",
+    "moving average", "technical analysis", "market wrap", "week ahead",
+    "stocks to watch", "5 stocks", "10 stocks"
+  ],
+  "high_keywords": [
+    "fda approves", "fda grants", "fda accepted", "accelerated approval",
+    "breakthrough designation", "orphan drug", "phase 3", "phase iii",
+    "phase 2", "phase ii", "complete response letter", "pdufa",
+    "merger", "acquisition", "buyout", "going private", "strategic review",
+    "tender offer", "definitive agreement", "going-private",
+    "bankruptcy", "chapter 11", "chapter 7",
+    "short seller", "fraud", "sec investigation", "doj investigation",
+    "ceo resigns", "ceo resigned", "cfo resigns", "cfo resigned",
+    "activist investor", "poison pill"
+  ],
+  "multi_ticker_threshold": 5
+}
