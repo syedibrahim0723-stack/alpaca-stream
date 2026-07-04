@@ -1,47 +1,79 @@
 @echo off
-title Alpaca Stream — Deploy to GCP
+title Alpaca Stream - Deploy to GCP
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 
-echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-echo  Alpaca Stream — Deploy to GCP VM
-echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+echo =======================================
+echo  Alpaca Stream - Deploy to GCP VM
+echo =======================================
 echo.
 
-:: ── CONFIG — edit these three lines ─────────────────────────────────────────
-set PROJECT_ID=alpaca-stream-live
-set VM_NAME=alpaca-stream-vm
-set ZONE=us-east1-b
-:: ─────────────────────────────────────────────────────────────────────────────
+:: -- CONFIG - edit these three lines --------------------------------------------
+set PROJECT_ID=project-062a1e95-5575-43f3-adf
+set VM_NAME=instance-20260402-210914
+set ZONE=us-central1-a
+:: --------------------------------------------------------------------------------
 
 echo   Project : %PROJECT_ID%
 echo   VM      : %VM_NAME%
 echo   Zone    : %ZONE%
 echo.
 
-:: ── Check gcloud is installed ─────────────────────────────────────────────────
+:: -- Save this version to GitHub ------------------------------------------------
+echo [1/6] Saving version to GitHub...
+where git >nul 2>&1
+if errorlevel 1 (
+    echo [WARN]  git not found - skipping GitHub commit. Install from: https://git-scm.com/download/win
+    goto :after_git
+)
+
+git add -A
+if errorlevel 1 (
+    echo [ERROR] git add failed - see error above.
+    if exist .git\index.lock (
+        echo         A stale .git\index.lock file is blocking git. Close VS Code / GitHub
+        echo         Desktop / any other git tool, then delete .git\index.lock and re-run.
+    )
+    echo         Skipping GitHub push for this deploy.
+    goto :after_git
+)
+git diff --cached --quiet
+if errorlevel 1 (
+    git commit -m "Deploy %date% %time%" >nul
+    git push origin main
+    if errorlevel 1 (
+        echo [WARN]  git push failed - check your connection/credentials. Continuing with VM deploy anyway.
+    ) else (
+        echo [OK]    Pushed to GitHub
+    )
+) else (
+    echo [OK]    No code changes since last deploy - skipping commit
+)
+:after_git
+
+:: -- Check gcloud is installed ---------------------------------------------------
 where gcloud >nul 2>&1
 if errorlevel 1 (
-    echo ❌  gcloud CLI not found!
-    echo     Install from: https://cloud.google.com/sdk/docs/install
-    echo     Then run: gcloud init
+    echo [ERROR] gcloud CLI not found!
+    echo         Install from: https://cloud.google.com/sdk/docs/install
+    echo         Then run: gcloud init
     pause
     exit /b 1
 )
 
-:: ── Set active project ────────────────────────────────────────────────────────
-echo [1/5] Setting active project...
+:: -- Set active project ----------------------------------------------------------
+echo [2/6] Setting active project...
 gcloud config set project %PROJECT_ID% --quiet
 if errorlevel 1 (
-    echo ❌  Failed to set project. Make sure %PROJECT_ID% exists.
+    echo [ERROR] Failed to set project. Make sure %PROJECT_ID% exists.
     pause
     exit /b 1
 )
-echo ✅  Project set
+echo [OK]    Project set
 
-:: ── Copy app files to VM ──────────────────────────────────────────────────────
+:: -- Copy app files to VM ---------------------------------------------------------
 echo.
-echo [2/5] Copying app files to VM (this may take 30-60s)...
+echo [3/6] Copying app files to VM (this may take 30-60s)...
 
 gcloud compute scp --zone=%ZONE% --recurse ^
     main.py ^
@@ -50,8 +82,8 @@ gcloud compute scp --zone=%ZONE% --recurse ^
     %VM_NAME%:/opt/alpaca-stream/ --quiet
 
 if errorlevel 1 (
-    echo ❌  File copy failed. Is the VM running?
-    echo     Check: gcloud compute instances list
+    echo [ERROR] File copy failed. Is the VM running?
+    echo         Check: gcloud compute instances list
     pause
     exit /b 1
 )
@@ -61,23 +93,23 @@ gcloud compute scp --zone=%ZONE% --recurse ^
     static ^
     %VM_NAME%:/opt/alpaca-stream/ --quiet
 
-echo ✅  Files copied
+echo [OK]    Files copied
 
-:: ── Copy setup script and run it (first deploy only) ─────────────────────────
+:: -- Copy setup script and run it (first deploy only) -----------------------------
 echo.
-echo [3/5] Uploading setup script...
+echo [4/6] Uploading setup script...
 gcloud compute scp --zone=%ZONE% ^
     setup_vm.sh ^
     %VM_NAME%:~/setup_vm.sh --quiet
 
-echo ✅  Setup script uploaded
+echo [OK]    Setup script uploaded
 
-:: ── Copy .env securely ────────────────────────────────────────────────────────
+:: -- Copy .env securely -------------------------------------------------------------
 echo.
-echo [4/5] Uploading .env file...
+echo [5/6] Uploading .env file...
 if not exist .env (
-    echo ⚠️   No .env file found locally — skipping.
-    echo     You will need to manually create /opt/alpaca-stream/.env on the VM.
+    echo [WARN]  No .env file found locally - skipping.
+    echo         You will need to manually create /opt/alpaca-stream/.env on the VM.
 ) else (
     gcloud compute scp --zone=%ZONE% ^
         .env ^
@@ -85,34 +117,24 @@ if not exist .env (
     :: Move it into place on the VM
     gcloud compute ssh %VM_NAME% --zone=%ZONE% --quiet ^
         --command="sudo mv ~/alpaca-stream.env /opt/alpaca-stream/.env && sudo chown $USER:$USER /opt/alpaca-stream/.env && chmod 600 /opt/alpaca-stream/.env"
-    echo ✅  .env deployed
+    echo [OK]    .env deployed
 )
 
-:: ── Restart service ───────────────────────────────────────────────────────────
+:: -- Restart service -------------------------------------------------------------
 echo.
-echo [5/5] Restarting alpaca-stream service...
+echo [6/6] Restarting alpaca-stream service...
 gcloud compute ssh %VM_NAME% --zone=%ZONE% --quiet ^
     --command="sudo systemctl restart alpaca-stream && sudo systemctl status alpaca-stream --no-pager -l"
 
 echo.
-echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-echo  ✅  Deploy complete!
+echo =======================================
+echo  [OK] Deploy complete!
 echo.
 
-:: Print the external IP
-echo  Getting external IP...
-for /f "tokens=*" %%i in ('gcloud compute instances describe %VM_NAME% --zone=%ZONE% --format="get(networkInterfaces[0].accessConfigs[0].natIP)" 2^>nul') do set EXTERNAL_IP=%%i
-
-if defined EXTERNAL_IP (
-    echo  Dashboard: http://%EXTERNAL_IP%:8000
-    echo  Flow diagram: http://%EXTERNAL_IP%:8000/flow.html
-    echo  Alerts log: http://%EXTERNAL_IP%:8000/log/alerts
-) else (
-    echo  Run this to get your IP:
-    echo    gcloud compute instances describe %VM_NAME% --zone=%ZONE% --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
-)
-
-echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+echo  The dashboard is not public. To view it, run:
+echo    gcloud compute ssh %VM_NAME% --zone=%ZONE% -- -L 8000:localhost:8000
+echo  Then open: http://localhost:8000
+echo =======================================
 echo.
 echo  To stream live logs:
 echo    gcloud compute ssh %VM_NAME% --zone=%ZONE% --command="sudo journalctl -u alpaca-stream -f"

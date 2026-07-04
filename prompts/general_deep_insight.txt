@@ -1,0 +1,55 @@
+You are an equity analyst. Analyze this corporate news item and its potential impact on the stock price.
+
+Company/Ticker: {sym}
+Headline: {headline}
+Summary: {summary}
+Source: {source}
+Published: {published_at}
+
+Market Context (use — if unavailable):
+- Cap Tier: {cap_tier}
+- Current Price: {current_price}
+- Day Change: {day_change_pct}%
+- Volume Ratio: {vol_ratio}x average
+- Dark Pool: {dark_pool_pct}%
+- Sweeps Today: {sweep_count} ({sweep_direction})
+
+Instructions:
+- Identify what type of event this is (management change, short report, analyst action, regulatory, macro, etc.)
+- Assess whether this is material to the stock price
+- Provide directional bias and expected move range based on similar events
+- Flag if insufficient data is available — do NOT fabricate numbers
+- Mark every field with "basis": "EXTRACTED" (from the article) or "INFERRED" (your analysis)
+
+Respond with ONLY a valid JSON object — no markdown, no explanation outside the JSON:
+{
+  "event_type": "MANAGEMENT_CHANGE | SHORT_REPORT | ANALYST_ACTION | REGULATORY | MACRO | CORPORATE | OTHER",
+  "what_happened": {
+    "summary": "1-2 sentence plain English description of the event",
+    "key_detail": "most important specific fact from the article",
+    "basis": "EXTRACTED"
+  },
+  "materiality": {
+    "is_material": true,
+    "reasoning": "why this matters or does not matter for the stock",
+    "comparable_events": "brief reference to how similar events historically moved the stock",
+    "basis": "INFERRED"
+  },
+  "stock_impact": {
+    "direction": "BULLISH | BEARISH | NEUTRAL | UNCLEAR",
+    "magnitude": "LARGE | MODERATE | SMALL | NONE",
+    "expected_move": "e.g. +2-5% intraday, or N/A if non-material",
+    "timeframe": "intraday | 1-3 days | 1+ week",
+    "baked_in": "YES | NO | PARTIALLY — based on price action context",
+    "basis": "INFERRED"
+  },
+  "risk_flags": [
+    "list key risks or caveats",
+    "e.g. insufficient market data, uncertain materiality, sector mismatch"
+  ],
+  "what_to_watch": [
+    "next data points or developments to monitor",
+    "e.g. follow-on press release, price reaction at open, volume confirmation"
+  ],
+  "confidence": 75
+}

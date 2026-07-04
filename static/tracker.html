@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drug / Stock Stage Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:     #0d1117; --card:   #161b22; --card2:  #1c2128;
+      --border: #30363d; --text:   #e6edf3; --dim:    #8b949e;
+      --green:  #3fb950; --red:    #f85149; --blue:   #58a6ff;
+      --yellow: #d29922; --orange: #db6d28; --purple: #bc8cff; --teal: #39d353;
+    }
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    body { display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── app header ─────────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+      background: var(--card); border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    header h1 { font-size: 1rem; font-weight: 600; }
+    header .sub { color: var(--dim); font-size: .8rem; margin-left: auto; }
+
+    /* ── layout ─────────────────────────────────────────────────────── */
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── sidebar ────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 250px; flex-shrink: 0;
+      background: var(--card); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .sb-top { padding: 12px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+    .sb-top input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: 6px; padding: 6px 10px; font-size: .85rem; outline: none;
+    }
+    .sb-top input:focus { border-color: var(--blue); }
+    .sb-top .btn-add {
+      background: var(--blue); color: #000; border: none; border-radius: 6px;
+      padding: 6px 12px; font-size: .85rem; font-weight: 700; cursor: pointer;
+    }
+    .sb-top .btn-add:hover { opacity: .85; }
+    .filter-bar { padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex; gap: 5px; flex-wrap: wrap; }
+    .fbtn {
+      font-size: .7rem; padding: 3px 8px; border-radius: 4px; cursor: pointer;
+      background: var(--card2); color: var(--dim); border: 1px solid var(--border); transition: all .15s;
+    }
+    .fbtn.active { color: var(--text); border-color: var(--blue); background: #1a2636; }
+    .stock-list { overflow-y: auto; flex: 1; }
+    .s-item {
+      padding: 9px 12px; border-bottom: 1px solid var(--border); cursor: pointer;
+      display: flex; align-items: center; gap: 7px; transition: background .1s;
+    }
+    .s-item:hover { background: var(--card2); }
+    .s-item.active { background: #1a2636; border-left: 3px solid var(--blue); padding-left: 9px; }
+    .s-ticker { font-weight: 700; font-size: .9rem; min-width: 50px; }
+    .s-pill { font-size: .66rem; padding: 2px 7px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+    .s-chk { margin-left: auto; font-size: .7rem; color: var(--dim); }
+    .s-del { background: none; border: none; color: var(--dim); cursor: pointer; font-size: .76rem; opacity: 0; padding: 2px 4px; }
+    .s-item:hover .s-del { opacity: 1; }
+
+    /* ── main panel ─────────────────────────────────────────────────── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: var(--dim); }
+    .empty-state .ei { font-size: 2.5rem; }
+    .detail { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* ── top identity card ──────────────────────────────────────────── */
+    .id-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .id-row1 { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .id-ticker { font-size: 1.9rem; font-weight: 800; letter-spacing: -.5px; }
+    .id-name {
+      flex: 1; background: transparent; border: none; border-bottom: 1px dashed var(--border);
+      color: var(--dim); font-size: .92rem; outline: none; min-width: 160px; padding: 2px 4px;
+    }
+    .id-name:focus { border-bottom-color: var(--blue); color: var(--text); }
+    .id-stage-pill { font-size: .8rem; padding: 5px 14px; border-radius: 20px; font-weight: 700; cursor: pointer; border: 2px solid transparent; }
+
+    /* tags */
+    .tags-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 26px; }
+    .tag-pill {
+      font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+      cursor: pointer; border: 1px solid; letter-spacing: .2px; transition: opacity .15s;
+    }
+    .tag-pill:hover { opacity: .75; }
+    .btn-addtag {
+      font-size: .72rem; padding: 3px 10px; border-radius: 20px; cursor: pointer;
+      background: var(--card2); border: 1px dashed var(--border); color: var(--dim); font-weight: 600;
+    }
+    .btn-addtag:hover { border-color: var(--blue); color: var(--blue); }
+    .tag-picker {
+      background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px;
+    }
+    .tp-option { font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; cursor: pointer; border: 1px solid; opacity: .45; transition: opacity .15s; }
+    .tp-option.on { opacity: 1; }
+    .tp-option:hover { opacity: .8; }
+
+    /* catalyst banner */
+    .cat-banner {
+      background: #0f1f0f; border: 1px solid #2a4a1a; border-radius: 8px;
+      padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+    }
+    .cat-lbl { font-size: .65rem; font-weight: 800; color: var(--teal); text-transform: uppercase; letter-spacing: .8px; white-space: nowrap; }
+    .cat-sep { color: var(--border); font-size: 1rem; }
+    .cat-input {
+      flex: 1; background: transparent; border: none; color: #c8f0a0; font-size: .88rem;
+      font-weight: 500; outline: none; font-family: inherit;
+    }
+    .cat-input::placeholder { color: #3a5a2a; }
+
+    /* ── 2-column sections grid ─────────────────────────────────────── */
+    .sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .sec-full { grid-column: 1 / -1; }
+
+    /* individual section card */
+    .sec-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      display: flex; flex-direction: column; min-height: 120px; overflow: hidden;
+    }
+    .sec-hdr {
+      display: flex; align-items: center; gap: 7px; padding: 8px 12px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .sec-ico { font-size: .85rem; }
+    .sec-lbl { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--dim); flex: 1; }
+    .sec-edit-btn {
+      font-size: .68rem; padding: 2px 7px; border-radius: 4px; cursor: pointer;
+      background: none; border: 1px solid var(--border); color: var(--dim);
+    }
+    .sec-edit-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .sec-edit-btn.active { background: #1a2636; border-color: var(--blue); color: var(--blue); }
+
+    /* view mode */
+    .sec-view {
+      flex: 1; padding: 10px 12px; font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: .76rem; line-height: 1.75; white-space: pre-wrap; word-break: break-word;
+      color: var(--text); cursor: text; overflow-y: auto;
+    }
+    .sec-view.empty { color: #3a4a3a; font-style: italic; font-family: 'Segoe UI', sans-serif; font-size: .8rem; }
+
+    /* edit mode */
+    .sec-textarea {
+      flex: 1; background: #111820; border: none; border-top: 1px solid var(--border);
+      color: var(--text); padding: 10px 12px;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: .76rem; line-height: 1.75; resize: none; outline: none; min-height: 120px;
+    }
+    .sec-textarea:focus { background: #0f1520; }
+    .sec-save-row { padding: 5px 10px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .sec-save-meta { font-size: .68rem; color: var(--dim); }
+    .sec-done-btn { font-size: .68rem; padding: 2px 8px; border-radius: 4px; cursor: pointer; background: var(--blue); color: #000; border: none; font-weight: 700; }
+
+    /* ── collapsible card (stage, checklist) ────────────────────────── */
+    .coll-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .coll-hdr {
+      display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+      cursor: pointer; user-select: none;
+    }
+    .coll-hdr:hover { background: var(--card2); }
+    .coll-ico { font-size: .9rem; }
+    .coll-ttl { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--dim); flex: 1; }
+    .coll-meta { font-size: .75rem; }
+    .coll-arr { font-size: .65rem; color: var(--dim); transition: transform .2s; }
+    .coll-arr.open { transform: rotate(90deg); }
+    .coll-body { display: none; border-top: 1px solid var(--border); }
+    .coll-body.open { display: block; }
+
+    /* stage chips */
+    .stage-grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+    .stage-chip {
+      padding: 5px 14px; border-radius: 20px; font-size: .78rem; font-weight: 600;
+      cursor: pointer; border: 2px solid transparent; transition: all .15s; opacity: .45;
+    }
+    .stage-chip.selected { opacity: 1; }
+
+    /* checklist */
+    .chk-body { padding: 10px 14px; }
+    .chk-toolbar { display: flex; gap: 6px; margin-bottom: 8px; }
+    .chk-toolbar input {
+      flex: 1; background: var(--card2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 6px; padding: 5px 9px; font-size: .8rem; outline: none;
+    }
+    .chk-toolbar input:focus { border-color: var(--blue); }
+    .chk-toolbar button {
+      background: var(--card2); border: 1px solid var(--border); color: var(--blue);
+      border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: .8rem;
+    }
+    .chk-toolbar button:hover { background: var(--border); }
+    .prog-wrap { background: var(--border); border-radius: 4px; height: 5px; overflow: hidden; margin-bottom: 8px; }
+    .prog-fill { height: 100%; border-radius: 4px; background: var(--green); transition: width .3s; }
+    .chk-grid { display: flex; flex-direction: column; gap: 5px; }
+    .attr-row {
+      display: flex; align-items: center; gap: 9px; background: var(--card2);
+      border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px; transition: border-color .15s;
+    }
+    .attr-row.checked { border-color: var(--green); }
+    .attr-row input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--green); flex-shrink: 0; }
+    .attr-lbl { flex: 1; font-size: .8rem; }
+    .attr-lbl.done { text-decoration: line-through; color: var(--dim); }
+    .attr-del { background: none; border: none; color: var(--dim); cursor: pointer; font-size: .72rem; opacity: .3; }
+    .attr-del:hover { opacity: 1; color: var(--red); }
+
+    /* stage colors */
+    .s-watchlist   { background:#1e1e26; color:var(--dim);    border-color:#3a3a50; }
+    .s-preclinical { background:#1e2a3a; color:#7cbeff;       border-color:#2d4a6e; }
+    .s-phase1      { background:#1e2a20; color:var(--teal);   border-color:#2d5e38; }
+    .s-phase2      { background:#2a2a1e; color:var(--yellow); border-color:#5e5a2d; }
+    .s-phase3      { background:#2a1e20; color:var(--orange); border-color:#6e3d2d; }
+    .s-nda         { background:#2a1e2a; color:var(--purple); border-color:#5e2d6e; }
+    .s-approved    { background:#1a2a1a; color:var(--green);  border-color:#2d5e2d; }
+    .s-commercial  { background:#2a2010; color:#ffaa44;       border-color:#6e4a10; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--card); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.2rem">💊</span>
+  <h1>Drug / Stock Stage Tracker</h1>
+  <span class="sub" id="totalCount">0 tracked</span>
+</header>
+
+<div class="layout">
+  <!-- sidebar -->
+  <div class="sidebar">
+    <div class="sb-top">
+      <input id="addInput" placeholder="Ticker or drug…" maxlength="20" />
+      <button class="btn-add" onclick="addStock()">+ Add</button>
+    </div>
+    <div class="filter-bar" id="filterBar"></div>
+    <div class="stock-list" id="stockList"></div>
+  </div>
+
+  <!-- main -->
+  <div class="main" id="mainPanel">
+    <div class="empty-state"><div class="ei">📋</div><div>Select or add a stock to begin</div></div>
+  </div>
+</div>
+
+<script>
+// ── constants ──────────────────────────────────────────────────────────────────
+const STAGES = [
+  { id:'watchlist',   label:'Watchlist',   cls:'s-watchlist'   },
+  { id:'preclinical', label:'Pre-Clinical', cls:'s-preclinical' },
+  { id:'phase1',      label:'Phase 1',      cls:'s-phase1'      },
+  { id:'phase2',      label:'Phase 2',      cls:'s-phase2'      },
+  { id:'phase3',      label:'Phase 3',      cls:'s-phase3'      },
+  { id:'nda',         label:'NDA / BLA',    cls:'s-nda'         },
+  { id:'approved',    label:'Approved',     cls:'s-approved'    },
+  { id:'commercial',  label:'Commercial',   cls:'s-commercial'  },
+];
+
+const NOTE_SECS = [
+  { key:'profile',   label:'Profile',            icon:'🏢', ph:'Company overview, lead drug, platform technology, indication…' },
+  { key:'products',  label:'Products / Pipeline', icon:'💊', ph:'Approved products with revenue, pipeline drugs, trial status…' },
+  { key:'catalysts', label:'Upcoming Catalysts',  icon:'🚀', ph:'[Q/Year] Event — detail\n[Q/Year] Event — detail' },
+  { key:'thesis',    label:'Thesis',              icon:'🧠', ph:'Why this play, score, classification, strategy fit…' },
+  { key:'risks',     label:'Risks',               icon:'⚠️',  ph:'- Risk 1\n- Risk 2' },
+];
+
+const ALL_TAGS = [
+  { id:'solo_winner',   label:'⭐ Solo Winner',     color:'#ffd060', bg:'#2a250a', border:'#6a5a10' },
+  { id:'platform_play', label:'🔬 Platform Play',   color:'#58a6ff', bg:'#0e1e36', border:'#1e4070' },
+  { id:'fast_track',    label:'⚡ Fast Track',      color:'#bc8cff', bg:'#1e1030', border:'#4a2070' },
+  { id:'near_approval', label:'🎯 Near Approval',   color:'#d29922', bg:'#2a2010', border:'#6a5010' },
+  { id:'binary_event',  label:'🎲 Binary Event',    color:'#db6d28', bg:'#2a1a08', border:'#6a3810' },
+  { id:'revenue_base',  label:'💰 Revenue Base',    color:'#ffaa44', bg:'#261a00', border:'#604010' },
+  { id:'barda_funded',  label:'🏛 BARDA Funded',    color:'#39d353', bg:'#0a1e10', border:'#1a5028' },
+  { id:'govt_backed',   label:'🏛 Govt Backed',     color:'#39d353', bg:'#0a1e10', border:'#1a5028' },
+  { id:'derisked',      label:'🛡 De-risked',       color:'#3fb950', bg:'#0a1e10', border:'#1a4a1a' },
+  { id:'orphan_drug',   label:'🏥 Orphan Drug',     color:'#7cbeff', bg:'#0a1830', border:'#1a3a60' },
+  { id:'competitive',   label:'⚔️ Competitive Mkt', color:'#f85149', bg:'#2a0e0e', border:'#601010' },
+  { id:'dilution_risk', label:'⚠️ Dilution Risk',   color:'#f85149', bg:'#2a0e0e', border:'#601010' },
+];
+
+const DEFAULT_ATTRS = [
+  'Strong management team',
+  'Large addressable market (TAM)',
+  'Catalyst upcoming (PDUFA / trial readout)',
+  'Clean balance sheet / cash runway',
+  'No major competitors',
+  'Orphan drug / fast-track designation',
+  'Positive phase 2 data',
+  'Institutional ownership',
+];
+
+const EMPTY_SECS = () => ({ profile:'', products:'', catalysts:'', thesis:'', risks:'' });
+
+// ── state ──────────────────────────────────────────────────────────────────────
+let stocks = [];
+let selectedId = null;
+let currentFilter = 'all';
+let editMode = {};       // { profile: true/false, … }
+let tagPickerOpen = false;
+const collOpen = { stage: true, checklist: true };
+
+// ── storage ────────────────────────────────────────────────────────────────────
+function loadData()  { try { return JSON.parse(localStorage.getItem('stockTracker')||'[]'); } catch { return []; } }
+function saveData(d) { localStorage.setItem('stockTracker', JSON.stringify(d)); }
+function migrateStock(s) {
+  if (!s.sections) { s.sections = EMPTY_SECS(); if (s.notes) { s.sections.profile = s.notes; delete s.notes; } }
+  if (!s.tags) s.tags = [];
+  if (!s.nextCatalyst) s.nextCatalyst = '';
+  return s;
+}
+
+// ── seeds ──────────────────────────────────────────────────────────────────────
+const SEEDS = [
+  {
+    id: 'urgn_seed', ticker: 'URGN', name: 'UroGen Pharma', stage: 'commercial',
+    tags: ['platform_play','revenue_base','binary_event','derisked'],
+    nextCatalyst: '[H2 2026] UGN-103 NDA submission → 12-month FDA review begins → PDUFA ~2027',
+    attrs: [
+      { id:'u1', label:'JELMYTO FDA-approved (2020) — LG-UTUC, ~$97-101M revenue guide 2026', checked:true  },
+      { id:'u2', label:'ZUSDURI FDA-approved (Jun 2025) — LG-IR-NMIBC bladder cancer',        checked:true  },
+      { id:'u3', label:'J-Code J9282 secured for ZUSDURI — effective Jan 1, 2026',             checked:true  },
+      { id:'u4', label:'RTGel® proprietary platform — expandable to multiple indications',      checked:true  },
+      { id:'u5', label:'Revenue growing 21% YoY (full year 2025)',                             checked:true  },
+      { id:'u6', label:'First-in-class / only non-surgical chemoablative tx in its niches',    checked:true  },
+      { id:'u7', label:'UGN-103 Phase 3 (UTOPIA) 77.8% CR — FDA agreed on NDA strategy',      checked:true  },
+      { id:'u8', label:'UGN-103 NDA submitted (planned H2 2026)',                              checked:false },
+      { id:'u9', label:'UGN-103 FDA approval received (expected 2027)',                        checked:false },
+      { id:'u10',label:'UGN-104 Phase 3 enrollment completed (target end-2026)',               checked:false },
+      { id:'u11',label:'UGN-501 IND filed + Phase 1 initiated (planned 2026)',                 checked:false },
+      { id:'u12',label:'Path to profitability / opex sustainably below revenue',               checked:false },
+    ],
+    sections: {
+      profile:
+`COMPANY:   UroGen Pharma Ltd (Nasdaq: URGN)
+FOCUS:     Uro-oncology — bladder & urinary tract cancers
+PLATFORM:  RTGel® Reverse Thermal Gel — proprietary sustained-release delivery
+           (not a single-drug company — technology is the moat)
+STATUS:    Commercial-stage with 2 FDA-approved products + active pipeline`,
+
+      products:
+`━━ APPROVED / COMMERCIAL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. JELMYTO (mitomycin) — Approved Apr 2020
+   Indication : Low-grade upper tract urothelial cancer (LG-UTUC)
+   Revenue    : $97–101M 2026 guide | Median durability 28.9 months
+   Status     : First-in-class non-surgical chemoablative tx — established
+
+2. ZUSDURI (UGN-102) — Approved Jun 2025
+   Indication : LG intermediate-risk NMIBC (bladder cancer)
+   J-Code     : J9282 effective Jan 1, 2026 → buy-and-bill now active
+   Revenue    : $15.8M launch year (2025) — ramping in 2026
+
+━━ PIPELINE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. UGN-103  — NDA-ready (Phase 3 complete)
+   Next-gen mitomycin | Simplified reconstitution vs ZUSDURI
+   UTOPIA trial: 77.8% 3-month CR rate | FDA agreed on NDA path
+   NDA planned H2 2026 → PDUFA ~mid-2027
+
+4. UGN-104  — Phase 3 ongoing
+   Indication : LG upper tract (JELMYTO label expansion)
+   Enrollment target: end 2026
+
+5. UGN-501  — IND-stage
+   Oncolytic virus | High-risk NMIBC
+   IND + Phase 1 planned 2026`,
+
+      catalysts:
+`[Q2/Q3 2026]  Type C FDA meetings — ZUSDURI label expansion (high-grade NMIBC + adjuvant)
+[H2 2026]     UGN-103 NDA submission ← PRIMARY BINARY EVENT
+[H2 2026]     UTOPIA full data publication / conference presentation
+[End 2026]    UGN-104 Phase 3 enrollment completion
+[2026]        UGN-501 IND filing + Phase 1 initiation (oncolytic virus)
+[Q1/Q2 2026]  ZUSDURI revenue ramp data — J-Code adoption proof points
+[~Mid 2027]   UGN-103 PDUFA / FDA decision (~12mo from H2 2026 filing)`,
+
+      thesis:
+`Platform company with 2 commercial drugs + pipeline on same sales infrastructure.
+
+SCORE: 9 / 12
+✔ Two FDA-approved products already generating revenue
+✔ J-Code secured → ZUSDURI adoption inflection underway
+✔ UGN-103 Phase 3 success → NDA path cleared by FDA
+✔ RTGel platform = optionality across multiple urology indications
+✔ First-in-class in its niches (not head-to-head vs blockbuster)
+✗ Not yet profitable (opex $240-250M, revenue still ramping)
+✗ ZUSDURI adoption pace vs expectations is unproven at scale
+✗ UGN-103 approval not guaranteed
+
+CLASSIFICATION: Commercial-stage platform + binary pipeline catalyst (2027)
+Lower risk than pure-pipeline biotechs. Revenue base limits downside.
+Upside lever: UGN-103 approval adds 3rd product on existing infrastructure.`,
+
+      risks:
+`- Not profitable: opex $240-250M vs growing-but-ramping revenue
+- ZUSDURI ramp uncertain — J-Code is necessary but not sufficient
+- UGN-103 approval not guaranteed (FDA path agreed, not pre-approved)
+- Competition from TURBT surgery (standard of care) — physician habit is sticky
+- Dilution risk if cash burn continues beyond expected timeline
+- ZUSDURI label limited to LG-IR-NMIBC until expansion trials read out`,
+    },
+    updatedAt: Date.now(),
+  },
+
+  {
+    id: 'ocul_seed', ticker: 'OCUL', name: 'Ocular Therapeutix', stage: 'nda',
+    tags: ['platform_play','near_approval','binary_event','revenue_base','competitive'],
+    nextCatalyst: '[2026] AXPAXLI NDA submission → FDA 10-12 month review → PDUFA ~2027',
+    attrs: [
+      { id:'o1', label:'Phase 3 SOL-1 completed with positive topline data (Feb 2026)',      checked:true  },
+      { id:'o2', label:'Superiority vs standard treatment (not just non-inferior)',           checked:true  },
+      { id:'o3', label:'DEXTENZA FDA-approved — existing commercial revenue base',            checked:true  },
+      { id:'o4', label:'Proprietary hydrogel sustained-release platform',                    checked:true  },
+      { id:'o5', label:'Long-acting implant → fewer injections (patient/doctor appeal)',      checked:true  },
+      { id:'o6', label:'Platform expandable beyond wet AMD to multiple eye diseases',        checked:true  },
+      { id:'o7', label:'NDA submission filed (expected 2026)',                               checked:false },
+      { id:'o8', label:'FDA approval received (AXPAXLI / OTX-TKI)',                         checked:false },
+      { id:'o9', label:'J-Code assigned (reimbursement pathway)',                            checked:false },
+      { id:'o10',label:'Formulary preference over Eylea / Vabysmo established',             checked:false },
+      { id:'o11',label:'Label strength confirmed (superiority language in full label)',      checked:false },
+      { id:'o12',label:'Dilution risk resolved / clean cap structure',                      checked:false },
+    ],
+    sections: {
+      profile:
+`COMPANY:   Ocular Therapeutix (Nasdaq: OCUL) — specialty ophthalmology biotech
+LEAD DRUG: AXPAXLI (OTX-TKI) — Tyrosine Kinase Inhibitor for Wet AMD
+PLATFORM:  Proprietary hydrogel sustained-release drug delivery
+           (long-acting implant — not a standard eye injection company)
+STATUS:    Phase 3 complete → Pre-NDA filing stage`,
+
+      products:
+`━━ LEAD PIPELINE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AXPAXLI (OTX-TKI) — PRE-NDA
+   Indication : Wet AMD (age-related macular degeneration)
+   Trial      : SOL-1 Phase 3 — COMPLETED, positive topline Feb 2026
+   Result     : SUPERIORITY vs standard treatment (not just non-inferior)
+   Next step  : NDA submission → FDA decision
+
+━━ APPROVED / COMMERCIAL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DEXTENZA (dexamethasone insert)
+   Indication : Post-surgical ocular inflammation & pain
+   Status     : FDA-approved, generating recurring revenue
+   Role       : Reduces binary risk — not a zero-revenue pure pipeline play
+
+━━ PLATFORM UPSIDE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Hydrogel delivery system applicable to:
+   - Other retinal diseases (DME, RVO, DR)
+   - Post-surgical applications beyond DEXTENZA
+   - Any sustained ocular drug release indication`,
+
+      catalysts:
+`[2026]        AXPAXLI NDA submission ← PRIMARY BINARY EVENT
+[2026/2027]   FDA review period begins (~10-12 month standard review)
+[~2027]       AXPAXLI PDUFA date / FDA approval decision
+[Post-approval] J-Code assignment → broad reimbursement enables adoption
+[Ongoing]     DEXTENZA revenue growth + potential label expansions
+[Future]      Hydrogel platform pipeline — next indication announcement`,
+
+      thesis:
+`Late-stage ophthalmology play with one binary event (AXPAXLI approval) + commercial base.
+
+SCORE: 8.5 / 12
+✔ Phase 3 SOL-1 SUCCESS — superiority signal (strongest possible)
+✔ NDA filing imminent — de-risked vs early-stage
+✔ Hydrogel platform = long-term pipeline optionality
+✔ DEXTENZA revenue base — not a zero-revenue binary
+✗ Competes with ENTRENCHED players: Eylea (Regeneron) + Vabysmo (Roche)
+✗ Label risk — final wording will determine physician adoption rate
+✗ Wet AMD is a massive but saturated market (high barrier to switch)
+
+CLASSIFICATION: Late-stage de-risked play (NOT early-stage alpha)
+Not "Phase 2 → undisputed winner" — competition is real and entrenched.
+Fits "near-approval → safer 2-3x" profile. Label quality is the KEY variable.
+
+KEY QUESTION: Will superiority data translate to formulary preference?`,
+
+      risks:
+`- Entrenched competition: Eylea (Regeneron) & Vabysmo (Roche) dominate wet AMD
+- Label risk: if label dilutes superiority claim → weak physician adoption
+- Reimbursement: J-Code process post-approval takes time → slow ramp
+- Dilution risk: capital raises possible before/after NDA filing
+- Commercial execution: ophthalmology sales force scaling required
+- Single growth driver — DEXTENZA is base, not a growth engine`,
+    },
+    updatedAt: Date.now(),
+  },
+
+  {
+    id: 'edsa_seed', ticker: 'EDSA', name: 'Edesa Biotech', stage: 'phase3',
+    tags: ['solo_winner','fast_track','barda_funded','govt_backed','binary_event','dilution_risk'],
+    nextCatalyst: '[May 15-20, 2026] ATS Respiratory Innovation Summit — CEO oral Phase 3 presentation → triggers regulatory pathway / partnership discussions',
+    attrs: [
+      { id:'e1',  label:'Phase 3 EB05: 27% relative mortality reduction in ARDS (p<0.001), 278 pts',  checked:true  },
+      { id:'e2',  label:'Two positive readouts — IMV cohort (Oct 2025) + full population (Feb 2026)',   checked:true  },
+      { id:'e3',  label:'Non-IMV patients: 35% relative mortality reduction (15% vs 23%)',             checked:true  },
+      { id:'e4',  label:'FDA Fast Track Designation — expedited review pathway',                       checked:true  },
+      { id:'e5',  label:'BARDA selected EB05 — US govt-funded platform ARDS trial (~200 pts)',         checked:true  },
+      { id:'e6',  label:'C$23M Canadian government funding — manufacturing scale-up',                  checked:true  },
+      { id:'e7',  label:'First-in-class anti-TLR4 mAb — no other approved ARDS survival drug exists', checked:true  },
+      { id:'e8',  label:'Provisional patents filed: sepsis, acute kidney injury, pneumonia',           checked:true  },
+      { id:'e9',  label:'EB01 (Daniluromer) Phase 3-ready — Allergic Contact Dermatitis',             checked:true  },
+      { id:'e10', label:'ATS 2026 oral presentation delivered (May 15-20, 2026)',                      checked:false },
+      { id:'e11', label:'FDA Type B meeting completed — NDA pathway defined',                          checked:false },
+      { id:'e12', label:'NDA filing for paridiprubart submitted',                                      checked:false },
+      { id:'e13', label:'Partnership / licensing deal signed (commercialization partner)',              checked:false },
+      { id:'e14', label:'FDA approval + commercial manufacturing ready',                               checked:false },
+      { id:'e15', label:'Cash runway extended (raise / partnership / grant)',                          checked:false },
+    ],
+    sections: {
+      profile:
+`COMPANY:    Edesa Biotech Inc (Nasdaq: EDSA) — micro-cap clinical-stage biotech
+FOCUS:      Host-directed therapeutics for immuno-inflammatory diseases
+LEAD DRUG:  Paridiprubart (EB05) — first-in-class anti-TLR4 monoclonal antibody
+MECHANISM:  Blocks TLR4 (Toll-Like Receptor 4) — master switch of hyperinflammation
+            TLR4 activated by: viruses, bacteria, injury/trauma, sepsis, autoimmune
+            Host-directed = works regardless of pathogen (flu, COVID, bacteria, fungal)
+STATUS:     Phase 3 COMPLETE — pre-FDA meeting / pre-NDA stage
+VALIDATION: BARDA selected (US govt) + C$23M Canadian govt manufacturing funding
+
+FINANCIALS (as of Q1 FY2026):
+  Cash      : $12.1M | Working capital: $12.0M
+  Net loss  : $2.2M/quarter | Opex: $2.3M/quarter
+  Runway    : ~1.3-1.4 years at current burn
+  ATM       : Active at-the-market offering (dilution risk is real)
+  Market cap: ~$12-15M (extreme mispricing IF NDA succeeds)`,
+
+      products:
+`━━ LEAD ASSET — PRE-NDA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Paridiprubart (EB05) — ARDS (Acute Respiratory Distress Syndrome)
+  Mechanism   : Anti-TLR4 mAb — blocks hyperinflammatory cascade at the source
+  Phase 3     : COMPLETED — 278 patients randomized, 2 consecutive positive readouts
+
+  RESULTS SUMMARY:
+  ┌─────────────────────────────────────────────────────┐
+  │ Full population (n=278):                            │
+  │   Mortality: 24% (EB05) vs 33% (placebo)           │
+  │   Relative risk reduction: 27% (p<0.001)           │
+  ├─────────────────────────────────────────────────────┤
+  │ IMV patients (n=104, Oct 2025):                     │
+  │   Mortality: 39% (EB05) vs 52% (placebo)           │
+  │   Relative risk reduction: 25% (p<0.001)           │
+  ├─────────────────────────────────────────────────────┤
+  │ Non-IMV patients (n=174):                           │
+  │   Mortality: 15% (EB05) vs 23% (placebo)           │
+  │   Relative risk reduction: 35%                     │
+  └─────────────────────────────────────────────────────┘
+
+  Efficacy also shown in: pneumonia, sepsis, acute kidney injury subgroups
+  Safety: Generally well-tolerated across 275+ patients
+
+  Designations: FDA Fast Track | BARDA selected | Govt of Canada funded
+  Next step   : Type B FDA meeting → NDA pathway definition
+
+━━ PIPELINE EXPANSION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Paridiprubart — additional indications (provisional patents filed):
+  · Sepsis           — significant subgroup results in Phase 3
+  · Acute Kidney Injury — significant subgroup results in Phase 3
+  · Pneumonia        — significant subgroup results in Phase 3
+  · Pulmonary Fibrosis — IND-stage US Phase 2 program planned
+
+EB01 (Daniluromer 1.0% cream) — Phase 3-ready
+  Indication : Moderate-to-severe chronic Allergic Contact Dermatitis (ACD)
+  Status     : 2 Phase 2 studies with statistically significant results
+  Next step  : Phase 3 initiation decision pending
+
+EB06 — Phase 2 (Vitiligo)
+  Status     : Phase 2 enrollment starting mid-2026
+  CRO        : JSS Medical Research Inc selected`,
+
+      catalysts:
+`[May 15-20, 2026]  ★ ATS Respiratory Innovation Summit — CEO oral presentation
+                      Phase 3 full data showcase → triggers regulatory + partnership discussions
+
+[2026]             FDA Type B meeting — define NDA submission strategy for paridiprubart
+[2026]             BARDA platform trial: ~200-patient cohort enrollment completion
+[Mid-2026]         EB06 vitiligo Phase 2 enrollment opens
+[2026]             EB01 ACD: Phase 3 initiation decision
+[2026]             Pulmonary fibrosis: IND filing (US Phase 2 program)
+[2026/2027]        NDA submission for paridiprubart (ARDS) — timeline TBD after FDA meeting
+[2026/2027]        Strategic partnership / licensing deal announcement
+                      (company actively exploring collaborations post-Phase 3)
+[Post-NDA ~2027+]  FDA review (~12 months standard / ~6 months Fast Track priority)
+[Post-approval]    Commercial partner launches in ICU/hospital setting`,
+
+      thesis:
+`Micro-cap ($12-15M mkt cap) with Phase 3-validated first-in-class drug — extreme asymmetry.
+
+SCORE: 8.5 / 12
+✔ Phase 3 SUCCESS (x2 readouts) — 27% mortality reduction, p<0.001, 278 patients
+✔ FIRST-IN-CLASS anti-TLR4 — no other approved drug that reduces ARDS mortality
+✔ FDA Fast Track — expedited review pathway (potentially ~6 months vs 12)
+✔ BARDA selection — US government endorsement of the science and the need
+✔ Platform potential: TLR4 implicated in sepsis, AKI, pneumonia, pulmonary fibrosis
+✔ C$23M govt manufacturing funding reduces cash burn for scale-up
+✗ ZERO revenue — pure binary bet on regulatory success
+✗ Cash runway ~1.4 years — needs raise or partnership before NDA approval
+✗ Micro-cap with active ATM offering — dilution is ongoing
+✗ Hospital-only market (ICU) — commercial model requires big-pharma partner
+✗ NDA timeline not confirmed — FDA meeting outcome defines everything
+
+CLASSIFICATION: High-risk / high-reward government-validated binary
+Market cap ($12-15M) vs ARDS market potential ($2-5B+ addressable) = extreme mispricing
+IF NDA succeeds. The de-risking is: Phase 3 data + BARDA endorsement.
+The risk is: tiny company with no commercial infrastructure and tight cash.
+
+HONEST TAKE:
+This is NOT a safe play. It is a speculative bet on:
+  1. FDA agreeing on NDA pathway (Type B meeting outcome)
+  2. Company surviving cash-wise until NDA or partnership
+  3. Finding a commercial partner to handle hospital ICU distribution`,
+
+      risks:
+`━━ FINANCIAL RISKS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Cash: only $12.1M as of Q1 FY2026 — ~1.3-1.4 year runway
+- Active ATM equity offering — dilution is ongoing
+- Net loss $2.2M/quarter with ZERO revenue
+- Must raise capital or secure partnership BEFORE NDA approval
+- Risk of dilutive emergency raise if cash runs low pre-NDA
+
+━━ REGULATORY RISKS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- NDA pathway not defined yet — FDA Type B meeting is the critical gate
+- BARDA selection validates the science, NOT the approval pathway
+- Fast Track is a designation, not a guarantee of approval
+- FDA may require additional data or expanded trial for NDA acceptance
+
+━━ COMMERCIAL RISKS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Hospital ICU setting: requires big-pharma partner to commercialize effectively
+- ARDS is a critical care indication — slow commercial ramp even post-approval
+- No existing sales force or commercial infrastructure
+- Physician adoption in ICU requires strong clinical evidence + guideline inclusion
+
+━━ EXECUTION RISKS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Manufacturing scale-up (C$23M program) must execute without delays
+- Small team — limited bandwidth for multiple programs simultaneously
+- EB01 and EB06 secondary programs could dilute management focus`,
+    },
+    updatedAt: Date.now(),
+  },
+];
+
+function seedAll() {
+  let data = loadData();
+  let changed = false;
+  SEEDS.forEach(seed => {
+    const key = seed.ticker === 'EDSA' ? 'seeded_edsa_v4' : 'seeded_' + seed.ticker.toLowerCase() + '_v3';
+    if (localStorage.getItem(key)) return;
+    const existing = data.find(s => s.ticker === seed.ticker);
+    if (existing) {
+      migrateStock(existing);
+      changed = true;
+    } else {
+      data.unshift({ ...seed });
+      changed = true;
+    }
+    localStorage.setItem(key, '1');
+  });
+  if (changed) saveData(data);
+}
+
+seedAll();
+
+// migrate all
+(function(){
+  const d = loadData(); let ch = false;
+  d.forEach(s => { const before = JSON.stringify(s); migrateStock(s); if (JSON.stringify(s)!==before) ch=true; });
+  if (ch) saveData(d);
+})();
+
+stocks = loadData();
+
+// ── helpers ────────────────────────────────────────────────────────────────────
+const stageById = id => STAGES.find(s => s.id === id) || STAGES[0];
+const tagById   = id => ALL_TAGS.find(t => t.id === id);
+const genId     = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const esc       = s  => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ── lifecycle ──────────────────────────────────────────────────────────────────
+document.getElementById('addInput').addEventListener('keydown', e => { if (e.key==='Enter') addStock(); });
+
+function addStock() {
+  const inp = document.getElementById('addInput');
+  const raw = inp.value.trim().toUpperCase();
+  if (!raw) return;
+  const existing = stocks.find(s => s.ticker === raw);
+  if (existing) { selectStock(existing.id); inp.value=''; return; }
+  const s = {
+    id: genId(), ticker: raw, name: '', stage: 'watchlist',
+    tags: [], nextCatalyst: '',
+    sections: EMPTY_SECS(),
+    attrs: DEFAULT_ATTRS.map(label => ({ id: genId(), label, checked: false })),
+    updatedAt: Date.now(),
+  };
+  stocks.unshift(s);
+  saveData(stocks);
+  inp.value = '';
+  renderAll();
+  selectStock(s.id);
+}
+
+function deleteStock(id, e) {
+  e.stopPropagation();
+  if (!confirm('Remove this entry?')) return;
+  stocks = stocks.filter(s => s.id !== id);
+  if (selectedId === id) { selectedId = null; showEmpty(); }
+  saveData(stocks);
+  renderAll();
+}
+
+function selectStock(id) {
+  selectedId = id;
+  editMode = {};
+  tagPickerOpen = false;
+  renderList();
+  renderDetail();
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+// ── render sidebar ─────────────────────────────────────────────────────────────
+function renderAll() { renderFilterBar(); renderList(); document.getElementById('totalCount').textContent = stocks.length+' tracked'; }
+
+function renderFilterBar() {
+  const bar = document.getElementById('filterBar');
+  const used = [...new Set(stocks.map(s => s.stage))];
+  bar.innerHTML = `<button class="fbtn ${currentFilter==='all'?'active':''}" onclick="setFilter('all',this)">All</button>`;
+  STAGES.filter(st => used.includes(st.id)).forEach(st =>
+    bar.innerHTML += `<button class="fbtn ${currentFilter===st.id?'active':''}" onclick="setFilter('${st.id}',this)">${st.label}</button>`
+  );
+}
+
+function renderList() {
+  const list = document.getElementById('stockList');
+  const vis = currentFilter==='all' ? stocks : stocks.filter(s => s.stage===currentFilter);
+  list.innerHTML = '';
+  vis.forEach(s => {
+    const st = stageById(s.stage);
+    const c  = s.attrs.filter(a => a.checked).length;
+    const el = document.createElement('div');
+    el.className = 's-item' + (s.id===selectedId?' active':'');
+    el.onclick = () => selectStock(s.id);
+    el.innerHTML = `
+      <span class="s-ticker">${s.ticker}</span>
+      <span class="s-pill ${st.cls}">${st.label}</span>
+      <span class="s-chk">${c}/${s.attrs.length}</span>
+      <button class="s-del" onclick="deleteStock('${s.id}',event)">✕</button>`;
+    list.appendChild(el);
+  });
+}
+
+function showEmpty() {
+  document.getElementById('mainPanel').innerHTML =
+    `<div class="empty-state"><div class="ei">📋</div><div>Select or add a stock to begin</div></div>`;
+}
+
+// ── render detail ──────────────────────────────────────────────────────────────
+function renderDetail() {
+  const s = stocks.find(x => x.id === selectedId);
+  if (!s) { showEmpty(); return; }
+  const stage = stageById(s.stage);
+  const chk   = s.attrs.filter(a => a.checked).length;
+  const pct   = s.attrs.length ? Math.round(chk/s.attrs.length*100) : 0;
+
+  // tags
+  const activeTags = (s.tags||[]).map(tid => {
+    const t = tagById(tid);
+    if (!t) return '';
+    return `<span class="tag-pill" style="color:${t.color};background:${t.bg};border-color:${t.border}"
+              onclick="removeTag('${s.id}','${tid}')" title="Click to remove">${t.label}</span>`;
+  }).join('');
+
+  // tag picker options
+  const pickerOpts = ALL_TAGS.map(t => {
+    const on = (s.tags||[]).includes(t.id) ? ' on' : '';
+    return `<span class="tp-option${on}" style="color:${t.color};background:${t.bg};border-color:${t.border}"
+              onclick="toggleTag('${s.id}','${t.id}')">${t.label}</span>`;
+  }).join('');
+
+  // note sections — 2-column grid
+  // Layout: [profile col1][products col2] / [catalysts full] / [thesis col1][risks col2]
+  const secHTML = (key, fullWidth=false) => {
+    const cfg  = NOTE_SECS.find(n => n.key === key);
+    const val  = (s.sections||{})[key] || '';
+    const isEd = !!editMode[key];
+    const cls  = fullWidth ? ' sec-full' : '';
+    return `
+      <div class="sec-card${cls}">
+        <div class="sec-hdr">
+          <span class="sec-ico">${cfg.icon}</span>
+          <span class="sec-lbl">${cfg.label}</span>
+          <button class="sec-edit-btn${isEd?' active':''}" onclick="toggleEdit('${s.id}','${key}')">
+            ${isEd ? '✓ Done' : '✎ Edit'}
+          </button>
+        </div>
+        ${isEd
+          ? `<textarea class="sec-textarea" id="ta-${key}" rows="8"
+                       oninput="autosaveSec('${s.id}','${key}',this.value)">${esc(val)}</textarea>
+             <div class="sec-save-row">
+               <span class="sec-save-meta" id="meta-${key}">auto-save enabled</span>
+               <button class="sec-done-btn" onclick="toggleEdit('${s.id}','${key}')">Done</button>
+             </div>`
+          : `<div class="sec-view${val.trim()?'':' empty'}" onclick="toggleEdit('${s.id}','${key}')">${
+               val.trim() ? esc(val) : cfg.ph
+             }</div>`
+        }
+      </div>`;
+  };
+
+  document.getElementById('mainPanel').innerHTML = `
+    <div class="detail">
+
+      <!-- identity card -->
+      <div class="id-card">
+        <div class="id-row1">
+          <span class="id-ticker">${s.ticker}</span>
+          <input class="id-name" id="nameInput" placeholder="Company / drug name…"
+                 value="${esc(s.name)}" maxlength="80" oninput="saveName('${s.id}',this.value)" />
+          <span class="id-stage-pill ${stage.cls}" style="margin-left:auto"
+                onclick="document.getElementById('body-stage').classList.toggle('open');document.getElementById('arr-stage').classList.toggle('open')"
+                title="Click to change stage">${stage.label} ▾</span>
+        </div>
+        <div class="tags-row" id="tagsRow">
+          ${activeTags}
+          <button class="btn-addtag" onclick="toggleTagPicker()">+ Tag</button>
+        </div>
+        ${tagPickerOpen ? `<div class="tag-picker">${pickerOpts}</div>` : ''}
+        <div class="cat-banner">
+          <span class="cat-lbl">🚀 Next Catalyst</span>
+          <span class="cat-sep">|</span>
+          <input class="cat-input" id="catInput" placeholder="[Q/Year] Event — detail…"
+                 value="${esc(s.nextCatalyst)}" oninput="saveCatalyst('${s.id}',this.value)" />
+        </div>
+      </div>
+
+      <!-- note sections 2-col grid -->
+      <div class="sec-grid">
+        ${secHTML('profile')}
+        ${secHTML('products')}
+        ${secHTML('catalysts', true)}
+        ${secHTML('thesis')}
+        ${secHTML('risks')}
+      </div>
+
+      <!-- stage -->
+      <div class="coll-card">
+        <div class="coll-hdr" onclick="toggleColl('stage')">
+          <span class="coll-ico">📍</span>
+          <span class="coll-ttl">Pipeline Stage</span>
+          <span class="coll-meta"><span class="s-pill ${stage.cls}">${stage.label}</span></span>
+          <span class="coll-arr${collOpen.stage?' open':''}" id="arr-stage">▶</span>
+        </div>
+        <div class="coll-body${collOpen.stage?' open':''}" id="body-stage">
+          <div class="stage-grid">
+            ${STAGES.map(st=>`<div class="stage-chip ${st.cls}${s.stage===st.id?' selected':''}"
+              onclick="setStage('${s.id}','${st.id}')">${st.label}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- checklist -->
+      <div class="coll-card">
+        <div class="coll-hdr" onclick="toggleColl('checklist')">
+          <span class="coll-ico">✅</span>
+          <span class="coll-ttl">Attribute Checklist</span>
+          <span class="coll-meta" id="chkBadge" style="font-size:.75rem;color:var(--dim)">${chk}/${s.attrs.length} · ${pct}%</span>
+          <span class="coll-arr${collOpen.checklist?' open':''}" id="arr-checklist">▶</span>
+        </div>
+        <div class="coll-body${collOpen.checklist?' open':''}" id="body-checklist">
+          <div class="chk-body">
+            <div class="prog-wrap"><div class="prog-fill" id="progFill" style="width:${pct}%"></div></div>
+            <div class="chk-toolbar">
+              <input id="newAttr" placeholder="Add custom attribute…" maxlength="120"
+                     onkeydown="if(event.key==='Enter')addAttr('${s.id}')" />
+              <button onclick="addAttr('${s.id}')">+ Add</button>
+            </div>
+            <div class="chk-grid" id="chkGrid">
+              ${s.attrs.map(a=>`
+                <div class="attr-row${a.checked?' checked':''}" id="ar-${a.id}">
+                  <input type="checkbox" ${a.checked?'checked':''} onchange="toggleAttr('${s.id}','${a.id}',this.checked)" />
+                  <span class="attr-lbl${a.checked?' done':''}">${esc(a.label)}</span>
+                  <button class="attr-del" onclick="deleteAttr('${s.id}','${a.id}')">✕</button>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>`;
+}
+
+// ── section edit mode ──────────────────────────────────────────────────────────
+function toggleEdit(stockId, key) {
+  editMode[key] = !editMode[key];
+  renderDetail();
+  if (editMode[key]) {
+    const ta = document.getElementById('ta-'+key);
+    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }
+}
+
+let secTimers = {};
+function autosaveSec(stockId, key, val) {
+  clearTimeout(secTimers[key]);
+  secTimers[key] = setTimeout(() => {
+    const s = stocks.find(x => x.id === stockId);
+    if (!s) return;
+    s.sections[key] = val;
+    s.updatedAt = Date.now();
+    saveData(stocks);
+    const meta = document.getElementById('meta-'+key);
+    if (meta) meta.textContent = 'saved';
+  }, 500);
+}
+
+// ── tags ───────────────────────────────────────────────────────────────────────
+function toggleTagPicker() {
+  tagPickerOpen = !tagPickerOpen;
+  renderDetail();
+}
+
+function toggleTag(stockId, tagId) {
+  const s = stocks.find(x => x.id === stockId);
+  if (!s) return;
+  const idx = (s.tags||[]).indexOf(tagId);
+  if (idx === -1) s.tags.push(tagId); else s.tags.splice(idx, 1);
+  saveData(stocks);
+  renderDetail();
+}
+
+function removeTag(stockId, tagId) {
+  const s = stocks.find(x => x.id === stockId);
+  if (!s) return;
+  s.tags = (s.tags||[]).filter(t => t !== tagId);
+  saveData(stocks);
+  renderDetail();
+}
+
+// ── inline saves ───────────────────────────────────────────────────────────────
+function saveName(id, val) {
+  const s = stocks.find(x => x.id === id); if (s) { s.name = val; saveData(stocks); }
+}
+function saveCatalyst(id, val) {
+  const s = stocks.find(x => x.id === id); if (s) { s.nextCatalyst = val; saveData(stocks); }
+}
+
+// ── stage ──────────────────────────────────────────────────────────────────────
+function setStage(id, stageId) {
+  const s = stocks.find(x => x.id === id); if (!s) return;
+  s.stage = stageId; s.updatedAt = Date.now();
+  saveData(stocks); renderAll(); renderDetail();
+}
+
+// ── collapse ───────────────────────────────────────────────────────────────────
+function toggleColl(key) {
+  collOpen[key] = !collOpen[key];
+  const body = document.getElementById('body-'+key);
+  const arr  = document.getElementById('arr-'+key);
+  if (body) body.classList.toggle('open', collOpen[key]);
+  if (arr)  arr.classList.toggle('open', collOpen[key]);
+}
+
+// ── checklist ──────────────────────────────────────────────────────────────────
+function toggleAttr(stockId, attrId, checked) {
+  const s = stocks.find(x => x.id === stockId); if (!s) return;
+  const a = s.attrs.find(x => x.id === attrId);
+  if (a) { a.checked = checked; saveData(stocks); }
+  const row = document.getElementById('ar-'+attrId);
+  if (row) { row.classList.toggle('checked', checked); row.querySelector('.attr-lbl').classList.toggle('done', checked); }
+  const c = s.attrs.filter(a => a.checked).length;
+  const p = s.attrs.length ? Math.round(c/s.attrs.length*100) : 0;
+  const badge = document.getElementById('chkBadge');
+  const fill  = document.getElementById('progFill');
+  if (badge) badge.textContent = `${c}/${s.attrs.length} · ${p}%`;
+  if (fill)  fill.style.width = p+'%';
+  renderList();
+}
+
+function addAttr(stockId) {
+  const inp = document.getElementById('newAttr');
+  const lbl = inp.value.trim(); if (!lbl) return;
+  const s = stocks.find(x => x.id === stockId); if (!s) return;
+  s.attrs.push({ id: genId(), label: lbl, checked: false });
+  saveData(stocks); inp.value = ''; renderDetail();
+}
+
+function deleteAttr(stockId, attrId) {
+  const s = stocks.find(x => x.id === stockId); if (!s) return;
+  s.attrs = s.attrs.filter(a => a.id !== attrId);
+  saveData(stocks); renderDetail();
+}
+
+// ── init ───────────────────────────────────────────────────────────────────────
+renderAll();
+if (stocks.length) selectStock(stocks[0].id);
+</script>
+</body>
+</html>

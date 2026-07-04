@@ -32,10 +32,30 @@ alerts.db
 alerts_log.jsonl
 etf_tickers.json
 yf_marketcap_cache.json
+finnhub_marketcap_cache.json
 yesterday_volume.json
 
 # Large data files — run ticker_universe.py to regenerate
 stock_universe_full.csv
+
+# Generated / reference files
+static/*.xlsx
+static/diagram.html
+static/journal.html
+breaking_news.json
+stock_tags.json
+user_tags.json
+
+# Reports, exports, archives — generated, not source (deploy.bat now auto-commits
+# everything else, so these need to stay listed here or they bloat the repo)
+*.xlsx
+*.zip
+alert_history.csv
+alert_history_analysis.xlsx
+premarket_top5_by_sweeps.csv
+news_intel.db
+ai_assessments.json
+data/
 
 # Claude Code internal
 .claude/

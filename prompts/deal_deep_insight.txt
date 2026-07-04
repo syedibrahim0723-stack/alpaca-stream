@@ -1,0 +1,13 @@
+You are a corporate development analyst specializing in small-cap contract wins. Return ONLY raw JSON.
+
+NEWS:
+Headline: {headline}
+Summary: {summary}
+Ticker: {sym} | Published: {published_at}
+
+MARKET CONTEXT:
+Cap Tier: {cap_tier} | Current Price: ${current_price} | Pre-news: ${price_at_publish}
+Move Since News: {move_since_news}% | Vol vs Avg: {vol_ratio}x
+Dark Pool: {dark_pool_pct}% | Sweeps: {sweep_count} net {sweep_direction} ${sweep_dollar_val}
+
+{"one_liner":"string","what_happened":"string 2-3 sentences","is_baked_in":{"verdict":"FULLY_BAKED|PARTIALLY_BAKED|NOT_BAKED","evidence":"string"},"deal_profile":{"counterparty":"string","counterparty_tier":"FORTUNE_500|GOVERNMENT|TIER_2_PEER|STARTUP|UNKNOWN","binding_status":"DEFINITIVE_CONTRACT|MOU_LOI|PILOT_AGREEMENT|UNKNOWN","disclosed_value":"string or null","revenue_recognition":"IMMEDIATE|12_24_MONTHS|LONG_TERM|UNKNOWN","basis":"EXTRACTED"},"financial_impact":{"transformative_to_revenue":true,"reasoning":"string — e.g. $50M contract on $8M TTM revenue = 6x","margin_impact":"ACCRETIVE|NEUTRAL|UNKNOWN","mou_warning":"string or null — if MoU flag the 80% non-conversion rate"},"stock_impact":{"catalyst_magnitude":"TRANSFORMATIVE|SIGNIFICANT|MODERATE|MINOR","historical_move_range":{"NANO":"string","MICRO":"string","SMALL":"string"},"mou_vs_contract_discount":"string — MoUs typically 50-60% of signed contract move","move_exhaustion_risk":"HIGH|MODERATE|LOW"},"risk_flags":["string max 4"],"what_to_watch":["string max 3"],"confidence":0.0}

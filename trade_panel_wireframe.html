@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Trade Panel — Wireframe</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d1117; color: #e6edf3;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 12px; padding: 24px 28px 60px;
+  }
+  h1 { font-size: 15px; font-weight: 700; color: #58a6ff; margin-bottom: 4px; }
+  .subtitle { font-size: 10px; color: #8b949e; margin-bottom: 24px; }
+
+  /* ── Layout shell ─────────────────────────────────────────── */
+  .shell {
+    display: flex; gap: 0; height: 680px;
+    border: 1px solid #30363d; border-radius: 8px; overflow: hidden;
+  }
+
+  /* ── Left: 4 data columns (greyed out — context only) ──────── */
+  .left-cols {
+    width: 52%; border-right: 1px solid #30363d;
+    display: flex; flex-direction: column; background: #0d1117;
+  }
+  .context-hdr {
+    padding: 6px 10px; border-bottom: 1px solid #21262d;
+    font-size: 9px; color: #444d56; text-transform: uppercase; letter-spacing: 1px;
+    background: #0d1117;
+  }
+  .context-body {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    color: #21262d; font-size: 11px; flex-direction: column; gap: 6px;
+  }
+
+  /* ── Right: chart column ────────────────────────────────────── */
+  .right-col {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ── Chart controls bar ─────────────────────────────────────── */
+  .chart-ctrl {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px; background: #161b22;
+    border-bottom: 1px solid #30363d; flex-shrink: 0;
+  }
+  .sym-badge {
+    font-size: 16px; font-weight: 800; color: #39d353;
+    font-family: 'Courier New', monospace;
+  }
+  .price-big { font-size: 18px; font-weight: 700; color: #39d353; font-family: 'Courier New', monospace; }
+  .ml { margin-left: auto; }
+
+  /* ── Chart area ─────────────────────────────────────────────── */
+  .chart-area {
+    flex: 0 0 42%; background: #0d1117; border-bottom: 1px solid #30363d;
+    display: flex; align-items: center; justify-content: center;
+    color: #21262d; font-size: 11px; position: relative; overflow: hidden;
+  }
+  .chart-mock {
+    width: 100%; height: 100%; display: flex; align-items: flex-end;
+    padding: 12px 16px 20px; gap: 3px;
+  }
+  .bar { background: #39d353; opacity: 0.25; border-radius: 1px 1px 0 0; flex: 1; }
+
+  /* ── Trade Panel ────────────────────────────────────────────── */
+  .trade-panel {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    background: #161b22;
+  }
+
+  .tp-hdr {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    padding: 7px 12px; background: #161b22;
+    border-bottom: 2px solid #30363d;
+    font-size: 10px; font-weight: 700; color: #8b949e;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .tp-sym { font-size: 12px; font-weight: 800; color: #58a6ff; font-family: 'Courier New', monospace; }
+  .tp-price { font-size: 12px; font-weight: 700; color: #39d353; font-family: 'Courier New', monospace; }
+
+  /* ── Order builder ──────────────────────────────────────────── */
+  .order-builder {
+    flex-shrink: 0; padding: 10px 12px;
+    border-bottom: 1px solid #30363d;
+    background: #1c2128;
+  }
+
+  .ob-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .ob-row:last-child { margin-bottom: 0; }
+
+  .ob-label {
+    font-size: 9.5px; color: #8b949e; text-transform: uppercase;
+    letter-spacing: .6px; width: 68px; flex-shrink: 0;
+  }
+
+  .ob-input {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 5px;
+    color: #e6edf3; font-size: 11px; font-family: 'Courier New', monospace;
+    padding: 4px 8px; width: 72px; text-align: right;
+  }
+  .ob-input:focus { border-color: #58a6ff; outline: none; }
+  .ob-unit { font-size: 10px; color: #8b949e; }
+
+  .ob-derived {
+    display: flex; align-items: center; gap: 5px;
+    background: #0d1117; border: 1px solid #21262d; border-radius: 5px;
+    padding: 3px 8px; flex: 1;
+  }
+  .ob-derived-label { font-size: 9px; color: #8b949e; }
+  .ob-derived-val   { font-size: 11px; font-family: 'Courier New', monospace; font-weight: 700; margin-left: auto; }
+
+  /* ── Buy / Sell buttons ─────────────────────────────────────── */
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+
+  .btn-buy {
+    flex: 1; padding: 9px; border-radius: 6px;
+    border: 1px solid rgba(63,185,80,.5);
+    background: rgba(63,185,80,.15); color: #3fb950;
+    font-size: 12px; font-weight: 800; cursor: pointer;
+    letter-spacing: .5px; display: flex; flex-direction: column;
+    align-items: center; gap: 1px;
+  }
+  .btn-buy:hover { background: rgba(63,185,80,.25); }
+  .btn-buy .btn-main { font-size: 13px; }
+  .btn-buy .btn-sub  { font-size: 9px; color: rgba(63,185,80,.7); font-weight: 400; font-family: 'Courier New', monospace; }
+
+  .btn-sell {
+    flex: 1; padding: 9px; border-radius: 6px;
+    border: 1px solid rgba(248,81,73,.5);
+    background: rgba(248,81,73,.15); color: #f85149;
+    font-size: 12px; font-weight: 800; cursor: pointer;
+    letter-spacing: .5px; display: flex; flex-direction: column;
+    align-items: center; gap: 1px;
+  }
+  .btn-sell:hover { background: rgba(248,81,73,.25); }
+  .btn-sell .btn-main { font-size: 13px; }
+  .btn-sell .btn-sub  { font-size: 9px; color: rgba(248,81,73,.7); font-weight: 400; font-family: 'Courier New', monospace; }
+
+  /* ── Offset controls ────────────────────────────────────────── */
+  .offset-row {
+    display: flex; align-items: center; gap: 6px; margin-top: 8px;
+    padding: 6px 8px; background: #0d1117;
+    border: 1px solid #21262d; border-radius: 6px;
+  }
+  .offset-label { font-size: 9px; color: #8b949e; flex: 1; }
+  .offset-group { display: flex; align-items: center; gap: 4px; }
+  .offset-tag { font-size: 9px; color: #8b949e; }
+  .offset-input {
+    background: #161b22; border: 1px solid #30363d; border-radius: 4px;
+    color: #e3b341; font-size: 11px; font-family: 'Courier New', monospace;
+    padding: 2px 6px; width: 44px; text-align: right;
+  }
+  .offset-pct { font-size: 9px; color: #8b949e; }
+
+  /* ── Positions / Orders section ─────────────────────────────── */
+  .pos-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .pos-tabs {
+    display: flex; flex-shrink: 0;
+    border-bottom: 1px solid #30363d;
+  }
+  .pos-tab {
+    padding: 5px 12px; font-size: 9.5px; font-weight: 700;
+    color: #8b949e; cursor: pointer; border-bottom: 2px solid transparent;
+    text-transform: uppercase; letter-spacing: .7px;
+  }
+  .pos-tab.active { color: #58a6ff; border-color: #58a6ff; }
+
+  .pos-table-wrap { flex: 1; overflow-y: auto; }
+  .pos-table-wrap::-webkit-scrollbar { width: 3px; }
+  .pos-table-wrap::-webkit-scrollbar-thumb { background: #30363d; }
+
+  table { width: 100%; border-collapse: collapse; font-family: 'Courier New', monospace; font-size: 10px; }
+  thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: #161b22; border-bottom: 1px solid #30363d;
+    padding: 4px 8px; text-align: right;
+    font-size: 8.5px; color: #8b949e; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .6px;
+  }
+  thead th:first-child { text-align: left; }
+  tbody td { padding: 4px 8px; border-bottom: 1px solid rgba(48,54,61,.3); text-align: right; }
+  tbody td:first-child { text-align: left; }
+  tbody tr:hover td { background: rgba(48,54,61,.2); }
+
+  .sym-cell { color: #58a6ff; font-weight: 700; }
+  .pos-green { color: #3fb950; }
+  .pos-red   { color: #f85149; }
+  .pos-dim   { color: #8b949e; }
+  .pos-yellow{ color: #e3b341; }
+
+  .cancel-btn {
+    background: none; border: 1px solid rgba(248,81,73,.3);
+    color: #f85149; border-radius: 3px; padding: 1px 6px;
+    font-size: 8.5px; cursor: pointer;
+  }
+
+  /* ── PnL summary bar ─────────────────────────────────────────── */
+  .pnl-bar {
+    display: flex; align-items: center; gap: 14px; flex-shrink: 0;
+    padding: 5px 12px; background: #1c2128;
+    border-top: 1px solid #30363d;
+    font-family: 'Courier New', monospace; font-size: 10px;
+  }
+  .pnl-item { display: flex; flex-direction: column; gap: 1px; }
+  .pnl-lbl  { font-size: 8px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; }
+  .pnl-val  { font-size: 11px; font-weight: 700; }
+
+  /* ── Annotations ────────────────────────────────────────────── */
+  .anno {
+    position: absolute; background: #1c2128;
+    border: 1px solid #58a6ff; border-radius: 5px;
+    padding: 4px 8px; font-size: 9.5px; color: #58a6ff;
+    white-space: nowrap; z-index: 10;
+  }
+  .anno-line {
+    position: absolute; background: #58a6ff; z-index: 9;
+  }
+  .anno-arrow { color: #58a6ff; font-size: 10px; }
+
+  /* ── Right panel notes ──────────────────────────────────────── */
+  .notes-section { margin-top: 28px; }
+  .notes-title { font-size: 11px; font-weight: 700; color: #8b949e; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .8px; }
+  .note-item {
+    display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start;
+  }
+  .note-num {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(88,166,255,.15); color: #58a6ff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800;
+  }
+  .note-text { font-size: 10.5px; color: #8b949e; line-height: 1.6; }
+  .note-text strong { color: #e6edf3; }
+
+  .formula-box {
+    background: #1c2128; border: 1px solid #30363d; border-radius: 6px;
+    padding: 8px 12px; margin-top: 10px; font-family: 'Courier New', monospace;
+    font-size: 10.5px; line-height: 1.8;
+  }
+
+  .q-item { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .q-badge {
+    background: rgba(227,179,65,.12); border: 1px solid rgba(227,179,65,.3);
+    color: #e3b341; border-radius: 4px; padding: 2px 7px; font-size: 9px;
+    font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  }
+  .q-text { font-size: 10px; color: #8b949e; line-height: 1.5; }
+  .q-text strong { color: #e6edf3; }
+</style>
+</head>
+<body>
+
+<h1>Trade Panel — Wireframe &amp; Design Spec</h1>
+<p class="subtitle">Replaces Options panel · lives below the price chart in the chart column</p>
+
+<div style="display:flex;gap:28px;align-items:flex-start">
+
+  <!-- ══════════════════════════════════════════════════════════
+       WIREFRAME
+  ═══════════════════════════════════════════════════════════ -->
+  <div style="flex:0 0 480px">
+    <div class="shell">
+
+      <!-- Left greyed-out columns -->
+      <div class="left-cols">
+        <div class="context-hdr">⚡ vol &nbsp;|&nbsp; 🎯 sweeps &nbsp;|&nbsp; 🔥 moves &nbsp;|&nbsp; 📋 history</div>
+        <div class="context-body">
+          <span style="font-size:28px;opacity:.08">▓▓▓▓</span>
+          <span style="color:#21262d">4 data columns (unchanged)</span>
+        </div>
+      </div>
+
+      <!-- Right: chart column -->
+      <div class="right-col">
+
+        <!-- Chart controls -->
+        <div class="chart-ctrl">
+          <span class="sym-badge">ABCD</span>
+          <span class="price-big">$28.44</span>
+          <span style="font-size:10px;color:#3fb950;background:rgba(63,185,80,.1);padding:2px 7px;border-radius:4px">+4.2%</span>
+          <span class="ml" style="font-size:9px;color:#8b949e">Today</span>
+        </div>
+
+        <!-- Chart mock -->
+        <div class="chart-area">
+          <div class="chart-mock">
+            <div class="bar" style="height:30%"></div><div class="bar" style="height:38%"></div>
+            <div class="bar" style="height:35%"></div><div class="bar" style="height:52%"></div>
+            <div class="bar" style="height:48%"></div><div class="bar" style="height:61%"></div>
+            <div class="bar" style="height:55%"></div><div class="bar" style="height:70%"></div>
+            <div class="bar" style="height:65%"></div><div class="bar" style="height:78%"></div>
+            <div class="bar" style="height:72%"></div><div class="bar" style="height:85%"></div>
+            <div class="bar" style="height:80%"></div><div class="bar" style="height:92%"></div>
+            <div class="bar" style="height:88%"></div><div class="bar" style="height:82%"></div>
+            <div class="bar" style="height:76%"></div><div class="bar" style="height:79%"></div>
+            <div class="bar" style="height:84%"></div><div class="bar" style="height:90%"></div>
+          </div>
+        </div>
+
+        <!-- ══ TRADE PANEL ══ -->
+        <div class="trade-panel">
+
+          <!-- Header -->
+          <div class="tp-hdr">
+            🔁 TRADE
+            <span class="tp-sym">ABCD</span>
+            <span class="tp-price">$28.44</span>
+            <span class="ml" style="font-size:9px;color:#444d56">Alpaca Paper</span>
+          </div>
+
+          <!-- Order builder -->
+          <div class="order-builder">
+
+            <!-- Notional $ -->
+            <div class="ob-row">
+              <span class="ob-label">Order size</span>
+              <input class="ob-input" value="100" style="width:68px">
+              <span class="ob-unit">USD</span>
+              <div class="ob-derived" style="flex:1">
+                <span class="ob-derived-label">Shares</span>
+                <span class="ob-derived-val" style="color:#8b949e">≈ 3.52 sh</span>
+              </div>
+            </div>
+
+            <!-- Offset controls -->
+            <div class="offset-row">
+              <span class="offset-label">Limit offset</span>
+              <div class="offset-group">
+                <span class="offset-tag" style="color:#3fb950">BUY −</span>
+                <input class="offset-input" value="1.0">
+                <span class="offset-pct">%</span>
+              </div>
+              <div style="width:1px;height:16px;background:#30363d;margin:0 4px"></div>
+              <div class="offset-group">
+                <span class="offset-tag" style="color:#f85149">SELL +</span>
+                <input class="offset-input" value="1.0">
+                <span class="offset-pct">%</span>
+              </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="btn-row">
+              <button class="btn-buy">
+                <span class="btn-main">▲ BUY LIMIT</span>
+                <span class="btn-sub">@ $28.16 · ≈3.55 sh</span>
+              </button>
+              <button class="btn-sell">
+                <span class="btn-main">▼ SELL LIMIT</span>
+                <span class="btn-sub">@ $28.72 · ≈3.48 sh</span>
+              </button>
+            </div>
+
+          </div><!-- /order-builder -->
+
+          <!-- Positions / Orders tabs -->
+          <div class="pos-section">
+            <div class="pos-tabs">
+              <div class="pos-tab active">Positions</div>
+              <div class="pos-tab">Open Orders</div>
+            </div>
+
+            <div class="pos-table-wrap">
+              <table>
+                <thead><tr>
+                  <th>Sym</th>
+                  <th>Qty</th>
+                  <th>Avg</th>
+                  <th>Mkt</th>
+                  <th>P&amp;L</th>
+                  <th>P&amp;L%</th>
+                  <th></th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td class="sym-cell">ABCD</td>
+                    <td>3.55</td>
+                    <td class="pos-dim">$28.16</td>
+                    <td>$28.44</td>
+                    <td class="pos-green">+$0.99</td>
+                    <td class="pos-green">+1.0%</td>
+                    <td><button class="cancel-btn">Close</button></td>
+                  </tr>
+                  <tr>
+                    <td class="sym-cell">EFGH</td>
+                    <td>2.38</td>
+                    <td class="pos-dim">$42.08</td>
+                    <td>$41.90</td>
+                    <td class="pos-red">−$0.43</td>
+                    <td class="pos-red">−0.4%</td>
+                    <td><button class="cancel-btn">Close</button></td>
+                  </tr>
+                  <tr>
+                    <td style="color:#444d56;font-style:italic;font-size:9px" colspan="7">Open Orders tab shows pending limit orders with Cancel button</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- PnL bar -->
+            <div class="pnl-bar">
+              <div class="pnl-item">
+                <span class="pnl-lbl">Day P&amp;L</span>
+                <span class="pnl-val pos-green">+$0.56</span>
+              </div>
+              <div class="pnl-item">
+                <span class="pnl-lbl">Open P&amp;L</span>
+                <span class="pnl-val pos-green">+$0.56</span>
+              </div>
+              <div class="pnl-item">
+                <span class="pnl-lbl">Positions</span>
+                <span class="pnl-val" style="color:#e6edf3">2</span>
+              </div>
+              <div class="pnl-item">
+                <span class="pnl-lbl">Orders</span>
+                <span class="pnl-val pos-yellow">1</span>
+              </div>
+              <div class="pnl-item" style="margin-left:auto">
+                <span class="pnl-lbl">Account</span>
+                <span class="pnl-val" style="color:#8b949e">Paper</span>
+              </div>
+            </div>
+
+          </div><!-- /pos-section -->
+
+        </div><!-- /trade-panel -->
+
+      </div><!-- /right-col -->
+
+    </div><!-- /shell -->
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       DESIGN NOTES
+  ═══════════════════════════════════════════════════════════ -->
+  <div style="flex:1">
+
+    <div class="notes-section">
+      <div class="notes-title">Design decisions to confirm</div>
+
+      <div class="note-item">
+        <div class="note-num">1</div>
+        <div class="note-text">
+          <strong>Order type — LIMIT not MARKET.</strong><br>
+          You said "buy at market_price × 0.99" — that's a limit order placed <em>below</em> current price.
+          It may not fill immediately if price moves away. Is that the intent (patient entry), or did you want
+          market order with a slippage guard?
+        </div>
+      </div>
+
+      <div class="note-item">
+        <div class="note-num">2</div>
+        <div class="note-text">
+          <strong>Shares calculation.</strong> Notional $100 ÷ limit price = fractional shares.
+          Alpaca supports fractional shares, but only for market orders on some brokers.
+          For limit orders it rounds down to nearest whole share — confirm which you prefer.
+        </div>
+      </div>
+
+      <div class="note-item">
+        <div class="note-num">3</div>
+        <div class="note-text">
+          <strong>SELL button — what are you selling?</strong><br>
+          If you already hold the stock → sell those shares at limit +yy%.<br>
+          If you don't hold it → short sell? Or block the button?
+        </div>
+      </div>
+
+      <div class="note-item">
+        <div class="note-num">4</div>
+        <div class="note-text">
+          <strong>Order lifetime (TIF).</strong> Should the limit order be:
+          GTC (good-till-cancelled), DAY (expires at close), or IOC (fill now or cancel)?
+          Day orders are safer for this use case.
+        </div>
+      </div>
+
+      <div class="note-item">
+        <div class="note-num">5</div>
+        <div class="note-text">
+          <strong>Paper or live trading?</strong> The wireframe shows "Paper" in the header.
+          Should there be a toggle, or always paper while building?
+        </div>
+      </div>
+
+      <div class="note-item">
+        <div class="note-num">6</div>
+        <div class="note-text">
+          <strong>Close position button.</strong> Should this close at market immediately,
+          or place a limit order at the current bid/ask midpoint?
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Formula box -->
+    <div class="formula-box" style="margin-top:16px">
+      <div style="font-size:9px;color:#8b949e;margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px">Price Formulas (as coded)</div>
+      <div style="color:#3fb950">BUY limit  = current_price × (1 − xx/100)</div>
+      <div style="color:#8b949e;font-size:9px;margin-bottom:6px;padding-left:12px">e.g.  $28.44 × 0.99  =  $28.16</div>
+      <div style="color:#f85149">SELL limit = current_price × (1 + yy/100)</div>
+      <div style="color:#8b949e;font-size:9px;margin-bottom:6px;padding-left:12px">e.g.  $28.44 × 1.01  =  $28.72</div>
+      <div style="color:#e3b341">Shares     = notional_USD / limit_price  (floor for limit orders)</div>
+      <div style="color:#8b949e;font-size:9px;padding-left:12px">e.g.  $100 / $28.16  =  3 shares (rounded down)</div>
+    </div>
+
+    <!-- Open questions -->
+    <div style="margin-top:16px">
+      <div class="notes-title">Open questions before build</div>
+      <div class="q-item">
+        <span class="q-badge">Q1</span>
+        <span class="q-text"><strong>Broker API key</strong> — do you have Alpaca Trading API keys (separate from data keys)? Paper trading uses paper.alpaca.markets endpoint.</span>
+      </div>
+      <div class="q-item">
+        <span class="q-badge">Q2</span>
+        <span class="q-text"><strong>Fractional shares?</strong> Limit orders require whole shares on most configs. Should $100 / $28.16 = 3 shares (not 3.55)?</span>
+      </div>
+      <div class="q-item">
+        <span class="q-badge">Q3</span>
+        <span class="q-text"><strong>Positions refresh rate</strong> — poll the Alpaca /positions endpoint every N seconds, or only on order events?</span>
+      </div>
+      <div class="q-item">
+        <span class="q-badge">Q4</span>
+        <span class="q-text"><strong>News dropdown</strong> — currently it's a toggle button in the chart controls. Should Trade panel replace News entirely or sit below it?</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

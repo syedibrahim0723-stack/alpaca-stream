@@ -1,0 +1,17 @@
+----FULL CLOSE----
+138:    async def close(self) -> None:
+139-        """Closes the websocket connection."""
+140-        if self._ws:
+141-            await self._ws.close()
+142-            self._ws = None
+143-            self._running = False
+144-
+145-    async def stop_ws(self) -> None:
+146-        """Signals websocket connection should close by adding a closing message to the stop_stream_queue"""
+147-        self._should_run = False
+148-        if self._stop_stream_queue.empty():
+149-            self._stop_stream_queue.put_nowait({"should_stop": True})
+150-        await asyncio.sleep(0)
+151-
+152-    async def _consume(self) -> None:
+153-        """Distributes data from websocket connection to appropriate callbacks"""

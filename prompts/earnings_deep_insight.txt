@@ -1,0 +1,66 @@
+You are a corporate earnings analyst. Read the full article content provided and extract actual reported numbers. Return ONLY raw JSON — no markdown, no explanation.
+
+ARTICLE:
+Ticker: {sym}
+Headline: {headline}
+Source: {source} | Published: {published_at}
+
+--- FULL ARTICLE TEXT ---
+{full_content}
+--- END ARTICLE ---
+
+Summary (fallback if article unavailable): {summary}
+
+MARKET CONTEXT:
+Cap Tier: {cap_tier} | Current Price: ${current_price}
+Day Change: {day_change_pct}% | Day Range: ${day_low} – ${day_high}
+Vol vs Avg: {vol_ratio}x | Dark Pool: {dark_pool_pct}%
+Sweeps Today: {sweep_count} ({sweep_direction}) | Sweep Value: ${sweep_dollar_val}
+
+Instructions:
+- Extract ACTUAL reported numbers from the article text (EPS, revenue, guidance)
+- If a number appears in the article, use it — mark basis "EXTRACTED"
+- If you cannot find a number, say "not reported" — do NOT invent figures
+- For transcripts: extract key management quotes on outlook/guidance
+- basis field: "EXTRACTED" = from article text, "INFERRED" = your analysis
+
+Return this exact JSON structure:
+{
+  "one_liner": "1 sentence plain-English summary of the earnings result",
+  "what_happened": {
+    "eps_actual": "e.g. $1.23 or 'not reported'",
+    "eps_estimate": "e.g. $1.10 or 'not reported'",
+    "eps_surprise": "e.g. +$0.13 (+11.8%) or 'unknown'",
+    "revenue_actual": "e.g. $4.2B or 'not reported'",
+    "revenue_estimate": "e.g. $4.0B or 'not reported'",
+    "revenue_surprise": "e.g. +$0.2B (+5%) or 'unknown'",
+    "guidance_next_q": "what mgmt said about next quarter, or 'not provided'",
+    "guidance_full_year": "full year guidance update, or 'not provided'",
+    "key_quote": "most important management quote from transcript, or 'none available'",
+    "key_driver": "the specific metric that drove the beat/miss (e.g. margins, user growth, cost cuts)",
+    "basis": "EXTRACTED"
+  },
+  "is_baked_in": {
+    "verdict": "FULLY_BAKED | PARTIALLY_BAKED | NOT_BAKED",
+    "evidence": "price action vs reported result",
+    "basis": "INFERRED"
+  },
+  "earnings_breakdown": {
+    "eps_result": "BEAT | MISS | IN_LINE | UNKNOWN",
+    "revenue_result": "BEAT | MISS | IN_LINE | UNKNOWN",
+    "guidance_revision": "UP | DOWN | WITHDRAWN | UNCHANGED | UNKNOWN",
+    "beat_quality": "ORGANIC | ONE_TIME_ITEM | MIXED | UNKNOWN",
+    "basis": "EXTRACTED"
+  },
+  "stock_impact": {
+    "catalyst_magnitude": "TRANSFORMATIVE | SIGNIFICANT | MODERATE | MINOR",
+    "direction": "BULLISH | BEARISH | NEUTRAL | MIXED",
+    "expected_move": "e.g. +5-10% next session based on magnitude",
+    "move_exhaustion_risk": "HIGH | MODERATE | LOW",
+    "guidance_effect": "guidance is usually more important — note if guidance is the key driver",
+    "basis": "INFERRED"
+  },
+  "risk_flags": ["list up to 4 key risks"],
+  "what_to_watch": ["list up to 3 next catalysts"],
+  "confidence": 85
+}

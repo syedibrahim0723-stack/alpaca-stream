@@ -18,7 +18,7 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,
+        reload=False,            # reload=True causes duplicate Alpaca WS connections → limit exceeded
         ws_ping_interval=None,   # disable library keepalive — app has its own
         ws_ping_timeout=None,
         loop="asyncio",

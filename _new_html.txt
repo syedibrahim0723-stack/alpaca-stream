@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RSI Backtester — 100xTrade</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+header{background:#161b22;border-bottom:1px solid #30363d;padding:10px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header h1{font-size:1.08rem;font-weight:700;color:#58a6ff;white-space:nowrap}
+.pill{background:#21262d;border:1px solid #30363d;border-radius:20px;padding:2px 9px;font-size:.70rem;color:#8b949e}
+.pill b{color:#e6edf3}
+.container{max-width:1380px;margin:0 auto;padding:14px 14px}
+.controls{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px 16px;margin-bottom:14px}
+.ctrl-row{display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end}
+.ctrl-group{display:flex;flex-direction:column;padding:8px 11px;background:#0d1117;border:1px solid #21262d;border-radius:7px}
+.ctrl-group-label{font-size:.62rem;color:#484f58;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;white-space:nowrap}
+.ctrl-fields{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:3px}
+label{font-size:.67rem;color:#8b949e;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+label .hint{font-size:.59rem;color:#484f58;text-transform:none;letter-spacing:0}
+input[type=text],input[type=date],input[type=number],input[type=time]{background:#161b22;border:1px solid #30363d;color:#e6edf3;padding:5px 8px;border-radius:5px;font-size:.87rem;outline:none;transition:border-color .15s}
+input:focus{border-color:#58a6ff}
+input[type=text]{width:90px;text-transform:uppercase}
+input[type=date]{width:145px}
+input[type=number]{width:68px}
+input[type=time]{width:95px;color-scheme:dark}
+.ticker-wrap{display:flex;flex-direction:column;gap:4px;min-width:260px}
+.ticker-input-row{display:flex;gap:6px;align-items:center}
+#symInput{width:100px;text-transform:uppercase}
+.btn-add{background:#21262d;border:1px solid #30363d;color:#58a6ff;border-radius:5px;padding:5px 10px;font-size:.82rem;cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn-add:hover{background:#2d333b}
+.chips{display:flex;gap:5px;flex-wrap:wrap;min-height:26px;margin-top:3px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#1f3a5f;border:1px solid #1f6feb;color:#58a6ff;border-radius:14px;padding:2px 10px;font-size:.78rem;font-weight:600}
+.chip .rm{cursor:pointer;color:#8b949e;font-size:.9rem;line-height:1;margin-left:2px}
+.chip .rm:hover{color:#f85149}
+.btn-run{background:linear-gradient(135deg,#1f6feb,#388bfd);color:#fff;border:none;border-radius:6px;padding:8px 22px;font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.btn-run:hover{opacity:.85}
+.btn-run:disabled{background:#21262d;color:#484f58;cursor:not-allowed}
+#status{font-size:.78rem;color:#8b949e;min-height:16px;margin-top:6px}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:7px;padding:10px 13px;flex:1;min-width:115px}
+.card-label{font-size:.64rem;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.card-value{font-size:1.25rem;font-weight:700}
+.green{color:#3fb950}.red{color:#f85149}.blue{color:#58a6ff}
+.yellow{color:#d29922}.purple{color:#bc8cff}.orange{color:#f0883e}
+.tab-bar{display:flex;gap:0;border-bottom:1px solid #30363d;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:7px 16px;font-size:.82rem;cursor:pointer;color:#8b949e;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;user-select:none}
+.tab:hover{color:#e6edf3}
+.tab.active{color:#58a6ff;border-bottom-color:#58a6ff;font-weight:600}
+.tab.err{color:#f85149}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.sym-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:#161b22;border:1px solid #30363d;border-radius:7px}
+.sym-bar .sym-name{font-size:1rem;font-weight:700;color:#58a6ff;margin-right:6px}
+.sym-stat{font-size:.78rem;color:#8b949e}
+.sym-stat b{color:#e6edf3}
+.charts{display:grid;grid-template-rows:300px 175px;gap:9px;margin-bottom:14px}
+.chart-box{background:#161b22;border:1px solid #30363d;border-radius:7px;padding:8px 12px}
+.section-title{font-size:.88rem;font-weight:600;color:#e6edf3;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.tag{background:#21262d;border-radius:4px;padding:2px 7px;font-size:.68rem;color:#8b949e;font-weight:400}
+.tbl-wrap{overflow-x:auto;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:.81rem}
+th{background:#21262d;color:#8b949e;padding:6px 10px;text-align:left;font-weight:500;border-bottom:1px solid #30363d;white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid #21262d;white-space:nowrap}
+tr:hover td{background:#1c2128}
+.badge{display:inline-block;border-radius:4px;padding:2px 6px;font-size:.67rem;font-weight:700}
+.badge-target{background:#1a3a2a;color:#3fb950}
+.badge-trail{background:#3a1f00;color:#f0883e}
+.badge-eod{background:#0f2a3f;color:#58a6ff}
+.sub-row td{background:#0d1117!important;padding:4px 10px 4px 24px;font-size:.77rem;color:#8b949e;border-bottom:1px solid #161b22}
+.toggle-btn{cursor:pointer;background:none;border:none;color:#58a6ff;font-size:.73rem;padding:0 3px}
+</style>
+</head>
+<body>
+<header>
+  <h1>&#9889; RSI Backtester</h1>
+  <span class="pill">Buy on <b>RSI dip recovery</b> &#183; +$1k/dip</span>
+  <span class="pill">Instant exit: <b>profit target</b></span>
+  <span class="pill">Trail: <b>RSI trigger</b> &#183; <b>RSI OB</b> &#183; <b>price+%</b> &#183; <b>exit time</b></span>
+  <span class="pill">No-loss guard <b>before exit time</b></span>
+</header>
+
+<div class="container">
+
+<div class="controls">
+  <div class="ctrl-row">
+
+    <div class="ctrl-group">
+      <div class="ctrl-group-label">Tickers &amp; Date</div>
+      <div class="ctrl-fields">
+        <div class="field ticker-wrap">
+          <label>Add symbols <span class="hint">Enter or click +</span></label>
+          <div class="ticker-input-row">
+            <input type="text" id="symInput" placeholder="ASTC" onkeydown="if(event.key==='Enter'){event.preventDefault();addTicker()}">
+            <button class="btn-add" onclick="addTicker()">+ Add</button>
+          </div>
+          <div class="chips" id="chips"></div>
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="dt" value="2026-05-28">
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-group-label">RSI Settings</div>
+      <div class="ctrl-fields">
+        <div class="field"><label>Period</label><input type="number" id="rsiPeriod" value="12" min="2" max="50"></div>
+        <div class="field"><label>Buy &#8595;</label><input type="number" id="rsiBuy" value="30" min="1" max="49"></div>
+        <div class="field"><label>OB &#8594; Trail <span class="hint">arms trail</span></label><input type="number" id="rsiSell" value="70" min="51" max="99"></div>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-group-label">Instant Exit</div>
+      <div class="ctrl-fields">
+        <div class="field"><label>Profit Target % <span class="hint">0=off</span></label><input type="number" id="profitTarget" value="10" min="0" max="500" step="0.5"></div>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-group-label">Trailing Stop &#8212; arms on ANY &#8595;</div>
+      <div class="ctrl-fields">
+        <div class="field"><label>RSI trigger <span class="hint">early arm</span></label><input type="number" id="rsiTrailTrigger" value="60" min="30" max="99"></div>
+        <div class="field"><label>Price +% <span class="hint">above avg</span></label><input type="number" id="trailActivate" value="3" min="0.1" max="50" step="0.5"></div>
+        <div class="field"><label>Exit Time <span class="hint">ET</span></label><input type="time" id="exitTime" value="13:00"></div>
+        <div class="field"><label>Trail % <span class="hint">from peak</span></label><input type="number" id="trailDist" value="3" min="0.1" max="30" step="0.5"></div>
+      </div>
+    </div>
+
+    <button class="btn-run" id="runBtn" onclick="runBacktest()">&#9654; Run</button>
+  </div>
+  <div id="status"></div>
+</div>
+
+<div class="cards" id="cards" style="display:none">
+  <div class="card"><div class="card-label">Total Net PNL</div><div class="card-value" id="cPnl">&#8212;</div></div>
+  <div class="card"><div class="card-label">Tickers</div><div class="card-value blue" id="cSyms">&#8212;</div></div>
+  <div class="card"><div class="card-label">Total Exits</div><div class="card-value blue" id="cTrades">&#8212;</div></div>
+  <div class="card"><div class="card-label">Total Legs</div><div class="card-value purple" id="cBuys">&#8212;</div></div>
+  <div class="card"><div class="card-label">Total Invested</div><div class="card-value yellow" id="cInvested">&#8212;</div></div>
+  <div class="card"><div class="card-label">Win Rate</div><div class="card-value yellow" id="cWin">&#8212;</div></div>
+  <div class="card"><div class="card-label">&#10003; Target</div><div class="card-value green" id="cTarget">&#8212;</div></div>
+  <div class="card"><div class="card-label">&#8600; Trail</div><div class="card-value orange" id="cTrail">&#8212;</div></div>
+  <div class="card"><div class="card-label">&#128737; Blocked</div><div class="card-value yellow" id="cBlocked">&#8212;</div></div>
+</div>
+
+<div id="tabSection" style="display:none">
+  <div class="tab-bar" id="tabBar"></div>
+  <div id="tabPanels"></div>
+</div>
+
+<div id="allTradesSection" style="display:none">
+  <div class="section-title">All Trades <span class="tag" id="allTradeTag"></span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th></th><th>Symbol</th><th>#</th><th>Legs</th>
+          <th>Avg Entry</th><th>Shares</th><th>Invested</th>
+          <th>Exit Time</th><th>Exit $</th><th>PNL $</th><th>PNL %</th>
+          <th>Exit Reason</th><th>Trail Armed By</th>
+        </tr>
+      </thead>
+      <tbody id="allTradeBody"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+let tickers = [];
+const chartRegistry = {};
+
+['ASTC','SPRC'].forEach(t => addTickerVal(t));
+
+function addTicker() {
+  const inp = document.getElementById('symInput');
+  const v   = inp.value.trim().toUpperCase();
+  if (v) { addTickerVal(v); inp.value = ''; }
+  inp.focus();
+}
+function addTickerVal(sym) {
+  if (!sym || tickers.includes(sym)) return;
+  tickers.push(sym);
+  renderChips();
+}
+function removeTicker(sym) {
+  tickers = tickers.filter(t => t !== sym);
+  renderChips();
+}
+function renderChips() {
+  document.getElementById('chips').innerHTML = tickers.map(t =>
+    '<span class="chip">' + t + '<span class="rm" onclick="removeTicker(\'' + t + '\')">&#x2715;</span></span>'
+  ).join('');
+}
+
+function destroyChart(id) {
+  if (chartRegistry[id]) { chartRegistry[id].destroy(); delete chartRegistry[id]; }
+}
+
+const fmt = ts => new Date(ts).toLocaleTimeString('en-US',
+  {hour:'2-digit',minute:'2-digit',timeZone:'America/New_York'});
+const fmtFull = ts => new Date(ts).toLocaleString('en-US',
+  {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',
+   timeZone:'America/New_York'});
+
+const REASON_COLOR = {target:'#3fb950',trail:'#f0883e',eod:'#58a6ff'};
+const BADGES = {
+  target:'<span class="badge badge-target">&#10003; Target</span>',
+  trail: '<span class="badge badge-trail">&#8600; Trail</span>',
+  eod:   '<span class="badge badge-eod">&#9201; EOD</span>',
+};
+function trailByLabel(key) {
+  if (!key) return '&#8212;';
+  if (key.startsWith('rsi'))   return 'RSI >= ' + key.slice(3);
+  if (key.startsWith('price')) return 'Price ' + key.slice(5);
+  if (key === 'exit_time')     return 'Exit time';
+  return key;
+}
+
+async function runBacktest() {
+  if (!tickers.length) { document.getElementById('status').textContent = 'Add at least one ticker.'; return; }
+  const dt    = document.getElementById('dt').value.trim();
+  const period= +document.getElementById('rsiPeriod').value    || 12;
+  const buy   = +document.getElementById('rsiBuy').value       || 30;
+  const sell  = +document.getElementById('rsiSell').value      || 70;
+  const target= +document.getElementById('profitTarget').value;
+  const rsiTT = +document.getElementById('rsiTrailTrigger').value || 60;
+  const tAct  = +document.getElementById('trailActivate').value   || 3;
+  const exitT = document.getElementById('exitTime').value         || '13:00';
+  const tDist = +document.getElementById('trailDist').value       || 3;
+  const btn   = document.getElementById('runBtn');
+  const status= document.getElementById('status');
+
+  if (!dt) { status.textContent = 'Select a date.'; return; }
+  btn.disabled = true;
+  status.textContent = 'Fetching ' + tickers.length + ' ticker(s)...';
+  ['cards','tabSection','allTradesSection'].forEach(id =>
+    document.getElementById(id).style.display = 'none');
+
+  const qs = new URLSearchParams({
+    symbols: tickers.join(','), date_str: dt,
+    rsi_period: period, rsi_buy: buy, rsi_sell: sell,
+    profit_target_pct: target,
+    trail_pct: tDist, trail_activate_pct: tAct,
+    rsi_trail_trigger: rsiTT, exit_time_str: exitT,
+  });
+
+  try {
+    const res  = await fetch('/api/backtest/multi?' + qs);
+    if (!res.ok) { const e = await res.json(); status.textContent = 'Error: ' + (e.detail || res.statusText); return; }
+    const data = await res.json();
+    status.textContent = tickers.length + ' ticker(s) done | RSI(' + data.rsi_period + ') buy<' + data.rsi_buy +
+      ' | target ' + data.profit_target_pct + '% | trail dist ' + data.trail_pct + '%';
+    render(data);
+  } catch(e) {
+    status.textContent = 'Network error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function render(data) {
+  const { results, total_pnl, rsi_buy, rsi_sell, rsi_period,
+          rsi_trail_trigger, trail_pct, trail_activate_pct, exit_time_str } = data;
+
+  const allTrades   = results.flatMap(r => (r.trades||[]).map(t => Object.assign({}, t, {symbol: r.symbol})));
+  const closed      = allTrades.filter(t => !t.open);
+  const wins        = closed.filter(t => t.pnl > 0).length;
+  const winRate     = closed.length ? Math.round(wins / closed.length * 100) : 0;
+  const totalBuys   = allTrades.reduce((s,t) => s + (t.buys||[]).length, 0);
+  const totalInvest = allTrades.reduce((s,t) => s + (t.total_cost||0), 0);
+  const byR = r     => allTrades.filter(t => t.reason === r).length;
+  const totalBlocked= results.reduce((s,r) => s + (r.blocked_count||0), 0);
+
+  const pEl = document.getElementById('cPnl');
+  pEl.textContent = '$' + total_pnl.toFixed(2);
+  pEl.className   = 'card-value ' + (total_pnl >= 0 ? 'green' : 'red');
+  document.getElementById('cSyms').textContent     = results.length;
+  document.getElementById('cTrades').textContent   = allTrades.length;
+  document.getElementById('cBuys').textContent     = totalBuys;
+  document.getElementById('cInvested').textContent = '$' + totalInvest.toFixed(0);
+  document.getElementById('cWin').textContent      = winRate + '% (' + wins + '/' + closed.length + ')';
+  document.getElementById('cTarget').textContent   = byR('target');
+  document.getElementById('cTrail').textContent    = byR('trail');
+  document.getElementById('cBlocked').textContent  = totalBlocked;
+  document.getElementById('cards').style.display   = 'flex';
+
+  const tabBar    = document.getElementById('tabBar');
+  const tabPanels = document.getElementById('tabPanels');
+  tabBar.innerHTML    = '';
+  tabPanels.innerHTML = '';
+  Object.keys(chartRegistry).forEach(k => { chartRegistry[k].destroy(); delete chartRegistry[k]; });
+
+  results.forEach((r, idx) => {
+    const sym    = r.symbol;
+    const hasErr = !!r.error;
+    const panelId= 'panel-' + sym;
+
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (hasErr ? ' err' : '') + (idx === 0 ? ' active' : '');
+    const symPnl = r.net_pnl != null ? ' ($' + (r.net_pnl >= 0 ? '+' : '') + r.net_pnl.toFixed(2) + ')' : '';
+    tab.textContent = sym + symPnl;
+    tab.onclick = () => switchTab(sym);
+    tab.dataset.sym = sym;
+    tabBar.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel' + (idx === 0 ? ' active' : '');
+    panel.id = panelId;
+
+    if (hasErr) {
+      panel.innerHTML = '<div style="padding:20px;color:#f85149">' + r.error + '</div>';
+    } else {
+      const trades   = r.trades || [];
+      const chart    = r.chart  || [];
+      const netPnl   = r.net_pnl || 0;
+      const pnlClass = netPnl >= 0 ? 'green' : 'red';
+      const legs     = trades.reduce((s,t) => s + (t.buys||[]).length, 0);
+      const invested = trades.reduce((s,t) => s + (t.total_cost||0), 0);
+      const pChId    = 'pc-' + sym;
+      const rChId    = 'rc-' + sym;
+
+      panel.innerHTML =
+        '<div class="sym-bar">' +
+          '<span class="sym-name">' + sym + '</span>' +
+          '<span class="sym-stat">Bars: <b>' + r.bars + '</b></span>' +
+          '<span class="sym-stat">Exits: <b>' + trades.length + '</b></span>' +
+          '<span class="sym-stat">Legs: <b>' + legs + '</b></span>' +
+          '<span class="sym-stat">Invested: <b>$' + invested.toFixed(0) + '</b></span>' +
+          '<span class="sym-stat">Blocked: <b>' + (r.blocked_count||0) + '</b></span>' +
+          '<span class="sym-stat">Net PNL: <b class="' + pnlClass + '">$' + netPnl.toFixed(2) + '</b></span>' +
+        '</div>' +
+        '<div class="charts">' +
+          '<div class="chart-box"><canvas id="' + pChId + '"></canvas></div>' +
+          '<div class="chart-box"><canvas id="' + rChId + '"></canvas></div>' +
+        '</div>';
+
+      tabPanels.appendChild(panel);
+      (function(s, ch, tr, pId, rId) {
+        requestAnimationFrame(function() {
+          drawCharts(s, ch, tr, rsi_buy, rsi_sell, rsi_period,
+                     rsi_trail_trigger, trail_pct, exit_time_str, pId, rId);
+        });
+      })(sym, chart, trades, pChId, rChId);
+    }
+
+    if (!tabPanels.contains(panel)) tabPanels.appendChild(panel);
+  });
+
+  document.getElementById('tabSection').style.display = 'block';
+  renderAllTrades(allTrades);
+}
+
+function switchTab(sym) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.sym === sym));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + sym));
+}
+
+function drawCharts(sym, chart, trades, rsi_buy, rsi_sell, rsi_period,
+                    rsi_trail_trigger, trail_pct, exit_time_str, pChId, rChId) {
+  const labels      = chart.map(c => fmt(c.t));
+  const closes      = chart.map(c => c.close);
+  const rsiVals     = chart.map(c => c.rsi);
+  const trailSeries = chart.map(c => c.trail_stop != null ? c.trail_stop : null);
+
+  const annotations = {};
+
+  const exitIdx = chart.findIndex(c => {
+    const t = new Date(c.t).toLocaleTimeString('en-US',
+      {hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'America/New_York'});
+    return t >= exit_time_str;
+  });
+  if (exitIdx >= 0) {
+    annotations['exitTime'] = {
+      type:'line', xMin:exitIdx, xMax:exitIdx,
+      borderColor:'#484f58', borderWidth:1, borderDash:[2,4],
+      label:{content:'Exit ' + exit_time_str, enabled:true, position:'start',
+             color:'#8b949e', backgroundColor:'rgba(0,0,0,.5)', font:{size:8}}
+    };
+  }
+
+  chart.forEach(function(c, idx) {
+    if (c.signal === 'buy') {
+      annotations['b' + idx] = {
+        type:'line', xMin:idx, xMax:idx,
+        borderColor:'#3fb950', borderWidth:1.5, borderDash:[3,3],
+        label:{content:'B $' + c.close, enabled:true, position:'start',
+               color:'#3fb950', backgroundColor:'rgba(0,0,0,.6)', font:{size:8}}
+      };
+    }
+    if (c.signal === 'sell') {
+      const mt  = trades.slice().reverse().find(t => new Date(t.exit_time) <= new Date(c.t));
+      const rsn = mt ? mt.reason : 'trail';
+      const col = REASON_COLOR[rsn] || '#e6edf3';
+      const lbl = rsn === 'target' ? 'TARGET $' + c.close : rsn === 'trail' ? 'TRAIL $' + c.close : 'EOD $' + c.close;
+      annotations['s' + idx] = {
+        type:'line', xMin:idx, xMax:idx,
+        borderColor:col, borderWidth:2, borderDash:[3,3],
+        label:{content:lbl, enabled:true, position:'end',
+               color:col, backgroundColor:'rgba(0,0,0,.6)', font:{size:8}}
+      };
+    }
+  });
+
+  trades.forEach(function(t, i) {
+    if (!t.buys || !t.buys.length) return;
+    const xS = chart.findIndex(c => new Date(c.t) >= new Date(t.buys[0].time));
+    const xE = chart.findIndex(c => new Date(c.t) >= new Date(t.exit_time));
+    if (xS >= 0 && xE > xS) {
+      annotations['avg' + i] = {
+        type:'line', yMin:t.avg_entry, yMax:t.avg_entry, xMin:xS, xMax:xE,
+        borderColor:'rgba(188,140,255,.5)', borderWidth:1, borderDash:[2,5],
+        label:{content:'avg $' + t.avg_entry, enabled:true, position:'center',
+               color:'#bc8cff', backgroundColor:'rgba(0,0,0,.4)', font:{size:7}}
+      };
+    }
+  });
+
+  destroyChart(pChId);
+  chartRegistry[pChId] = new Chart(document.getElementById(pChId).getContext('2d'), {
+    type:'line',
+    data:{labels:labels, datasets:[
+      {label:sym, data:closes, borderColor:'#58a6ff', borderWidth:1.5,
+       pointRadius:0, tension:0.1, fill:false, order:1},
+      {label:'Trail Stop (' + trail_pct + '%)', data:trailSeries,
+       borderColor:'#f0883e', borderWidth:1.1, borderDash:[4,3],
+       pointRadius:0, tension:0, fill:false, spanGaps:false, order:2},
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{
+        legend:{labels:{color:'#8b949e', boxWidth:11, font:{size:10}}},
+        annotation:{annotations:annotations}
+      },
+      scales:{
+        x:{ticks:{color:'#8b949e', maxTicksLimit:12}, grid:{color:'#21262d'}},
+        y:{ticks:{color:'#8b949e'}, grid:{color:'#21262d'}}
+      }
+    }
+  });
+
+  const rsiAnno = {
+    lineBuy:{type:'line', yMin:rsi_buy, yMax:rsi_buy, borderColor:'#3fb950', borderWidth:1, borderDash:[4,4],
+             label:{content:'Buy ' + rsi_buy, enabled:true, position:'end', color:'#3fb950', font:{size:8}, backgroundColor:'transparent'}},
+    lineTrail:{type:'line', yMin:rsi_trail_trigger, yMax:rsi_trail_trigger, borderColor:'#f0883e', borderWidth:1, borderDash:[3,3],
+              label:{content:'Trail ' + rsi_trail_trigger, enabled:true, position:'end', color:'#f0883e', font:{size:8}, backgroundColor:'transparent'}},
+    lineSell:{type:'line', yMin:rsi_sell, yMax:rsi_sell, borderColor:'#bc8cff', borderWidth:1.5, borderDash:[4,4],
+              label:{content:'TrailOB ' + rsi_sell, enabled:true, position:'end', color:'#bc8cff', font:{size:8}, backgroundColor:'transparent'}},
+  };
+
+  destroyChart(rChId);
+  chartRegistry[rChId] = new Chart(document.getElementById(rChId).getContext('2d'), {
+    type:'line',
+    data:{labels:labels, datasets:[{
+      label:'RSI(' + rsi_period + ')', data:rsiVals,
+      borderColor:'#d29922', borderWidth:1.5,
+      pointRadius:0, tension:0.1, fill:false, spanGaps:true,
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{
+        legend:{labels:{color:'#8b949e'}},
+        annotation:{annotations:rsiAnno}
+      },
+      scales:{
+        x:{ticks:{color:'#8b949e', maxTicksLimit:12}, grid:{color:'#21262d'}},
+        y:{min:0, max:100, ticks:{color:'#8b949e', stepSize:10}, grid:{color:'#21262d'}}
+      }
+    }
+  });
+}
+
+function renderAllTrades(allTrades) {
+  document.getElementById('allTradeTag').textContent = allTrades.length + ' total across all symbols';
+  const tbody = document.getElementById('allTradeBody');
+  tbody.innerHTML = '';
+
+  if (!allTrades.length) {
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#8b949e;padding:20px">No trades triggered</td></tr>';
+    document.getElementById('allTradesSection').style.display = 'block';
+    return;
+  }
+
+  const sorted = allTrades.slice().sort(function(a, b) {
+    const aT = a.buys && a.buys.length ? a.buys[0].time : a.exit_time;
+    const bT = b.buys && b.buys.length ? b.buys[0].time : b.exit_time;
+    return new Date(aT) - new Date(bT);
+  });
+
+  sorted.forEach(function(t, i) {
+    const tradeIdx = i + 1;
+    const pnlPct   = t.total_cost > 0 ? (t.pnl / t.total_cost * 100).toFixed(2) : '—';
+    const pClass   = t.pnl >= 0 ? 'green' : 'red';
+    const rowId    = 'all-sub-' + tradeIdx;
+    tbody.innerHTML +=
+      '<tr>' +
+        '<td><button class="toggle-btn" onclick="toggleSub(event,\'' + rowId + '\')">&#9658;</button></td>' +
+        '<td style="font-weight:700;color:#58a6ff">' + t.symbol + '</td>' +
+        '<td>' + tradeIdx + '</td>' +
+        '<td>' + (t.buys||[]).length + '</td>' +
+        '<td>$' + t.avg_entry + '</td>' +
+        '<td>' + t.total_shares + '</td>' +
+        '<td>$' + t.total_cost.toFixed(2) + '</td>' +
+        '<td>' + fmtFull(t.exit_time) + '</td>' +
+        '<td>$' + t.exit_price + '</td>' +
+        '<td class="' + pClass + '" style="font-weight:700">$' + t.pnl.toFixed(2) + '</td>' +
+        '<td class="' + pClass + '">' + pnlPct + '%</td>' +
+        '<td>' + (BADGES[t.reason] || t.reason) + '</td>' +
+        '<td style="color:#8b949e;font-size:.72rem">' + trailByLabel(t.trail_reason) + '</td>' +
+      '</tr>';
+    (t.buys||[]).forEach(function(b, bi) {
+      tbody.innerHTML +=
+        '<tr class="sub-row" id="' + rowId + '-' + bi + '" style="display:none">' +
+          '<td></td>' +
+          '<td style="color:#484f58">' + t.symbol + '</td>' +
+          '<td style="color:#484f58">' + tradeIdx + '.' + (bi+1) + '</td>' +
+          '<td><span style="color:#3fb950">&#9650; BUY</span></td>' +
+          '<td colspan="2">$' + b.price + ' x ' + b.shares + ' sh = $' + b.spend.toFixed(2) + '</td>' +
+          '<td colspan="7" style="color:#8b949e">' + fmtFull(b.time) + '</td>' +
+        '</tr>';
+    });
+  });
+
+  document.getElementById('allTradesSection').style.display = 'block';
+}
+
+function toggleSub(e, rowId) {
+  var i = 0;
+  while(true) {
+    var el = document.getElementById(rowId + '-' + i);
+    if (!el) break;
+    el.style.display = el.style.display === 'none' ? '' : 'none';
+    i++;
+  }
+  e.target.textContent = e.target.textContent === '▶' ? '▼' : '▶';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.activeElement.id !== 'symInput') runBacktest();
+});
+</script>
+</body>
+</html>
