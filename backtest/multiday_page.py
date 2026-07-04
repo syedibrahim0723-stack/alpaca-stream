@@ -119,6 +119,7 @@ tr:hover td{background:#1a2035}
   <a href="/batch">Batch Analysis</a>
   <a href="/multiday" class="active">Multi-Day Overnight</a>
   <a href="/alerts">Alerts</a>
+  <a href="/lowfloat">Low Float</a>
 </div>
 
 <div class="container">

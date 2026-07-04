@@ -117,6 +117,7 @@ tr:hover td{background:#1a2035}
   <a href="/spike">Spike</a>
   <a href="/grid">Grid</a>
   <a href="/alerts" class="active">Alerts</a>
+  <a href="/lowfloat">Low Float</a>
 </div>
 
 <div class="container">

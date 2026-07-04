@@ -114,6 +114,7 @@ tr:hover td{background:#1a2035}
   <a href="/spike">Spike</a>
   <a href="/grid" class="active">RSI Grid</a>
   <a href="/alerts">Alerts</a>
+  <a href="/lowfloat">Low Float</a>
 </div>
 
 <div class="wrap">

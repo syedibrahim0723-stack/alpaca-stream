@@ -3011,6 +3011,526 @@ async def alerts_page_route():
     return HTMLResponse(ALERTS_HTML)
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# Low-Float Spike Backtest  (alerts.db → yfinance float → Alpaca 1-min bars)
+#
+# Hypothesis: a low-float stock (< N million shares) that pops ≥ X% intraday
+# tends to sustain / extend the move. Scan a day's alerted symbols, rank by
+# dollar flow, filter by float + spike, then simulate an entry at
+# baseline × (1 + spike% + delta%) with $-sized bracket exits, and report
+# how far the runners actually go (max run-up distribution).
+# ══════════════════════════════════════════════════════════════════════════
+import json as _lf_json
+import sqlite3 as _lf_sql
+import asyncio as _lf_aio
+import statistics as _lf_stat
+from datetime import timedelta as _lf_td
+from pathlib import Path as _lf_Path
+
+LF_DB_PATH     = _lf_Path(__file__).resolve().parent.parent / "alerts.db"
+LF_FLOAT_CACHE = _lf_Path(__file__).resolve().parent / "float_cache.json"
+_LF_UTC        = ZoneInfo("UTC")
+
+
+def _lf_day_activity(day: date):
+    """Per-symbol alert activity for one NY calendar day, ranked by $ flow."""
+    start = datetime(day.year, day.month, day.day, tzinfo=NY).astimezone(_LF_UTC)
+    end   = start + _lf_td(days=1)
+    fmt   = lambda d: d.strftime("%Y-%m-%dT%H:%M:%S")
+    con = _lf_sql.connect(str(LF_DB_PATH))
+    try:
+        rows = con.execute(
+            """
+            SELECT sym,
+                   COUNT(*),
+                   SUM(CASE WHEN type='sweep' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN type='vol'   THEN 1 ELSE 0 END),
+                   SUM(COALESCE(value1m, 0)),
+                   MIN(ts),
+                   AVG(CASE WHEN vwap1m > 0 THEN vwap1m END)
+            FROM alerts
+            WHERE ts >= ? AND ts < ? AND sym != ''
+            GROUP BY sym
+            ORDER BY 5 DESC
+            """,
+            (fmt(start), fmt(end)),
+        ).fetchall()
+    finally:
+        con.close()
+
+    out = []
+    for sym, n, sweeps, vols, dollar, first_ts, avg_px in rows:
+        try:
+            first_ny = datetime.fromisoformat(first_ts.replace("Z", "+00:00")).astimezone(NY)
+            first_str = first_ny.strftime("%H:%M")
+        except (ValueError, AttributeError):
+            first_str = ""
+        out.append({
+            "sym":         sym,
+            "alerts":      n,
+            "sweeps":      sweeps or 0,
+            "vol_spikes":  vols or 0,
+            "dollar_flow": round(dollar or 0.0, 0),
+            "first_alert": first_str,
+            "avg_price":   round(avg_px, 4) if avg_px else None,
+        })
+    return out
+
+
+def _lf_read_float_cache() -> dict:
+    try:
+        return _lf_json.loads(LF_FLOAT_CACHE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _lf_fetch_floats_sync(symbols: list) -> dict:
+    """Sequential yfinance lookups sharing ONE session — parallel sessions trip
+    Yahoo's 'Invalid Crumb' auth, so do not parallelize this."""
+    out = {}
+    try:
+        import yfinance as yf
+        # corporate SSL interception on this machine — same reason the Alpaca
+        # client runs verify=False
+        from curl_cffi import requests as _curl_requests
+        sess = _curl_requests.Session(impersonate="chrome", verify=False)
+    except Exception:
+        return {s: {"float": None, "shares_out": None, "mcap": None, "name": ""}
+                for s in symbols}
+    for sym in symbols:
+        try:
+            info = yf.Ticker(sym, session=sess).get_info() or {}
+            out[sym] = {
+                "float":      info.get("floatShares"),
+                "shares_out": info.get("sharesOutstanding"),
+                "mcap":       info.get("marketCap"),
+                "name":       info.get("shortName") or "",
+            }
+        except Exception:
+            out[sym] = {"float": None, "shares_out": None, "mcap": None, "name": ""}
+    return out
+
+
+_LF_FLOAT_LOCK = _lf_aio.Lock()
+
+
+async def _lf_get_floats(symbols: list) -> dict:
+    """Float shares per symbol via yfinance, disk-cached. Successful lookups are
+    kept 30 days; failed/null lookups are retried after 1 day."""
+    cache = _lf_read_float_cache()
+    now   = datetime.now(_LF_UTC)
+    out, missing = {}, []
+
+    for s in symbols:
+        c = cache.get(s)
+        if c:
+            try:
+                age_days = (now - datetime.fromisoformat(c["fetched_at"])).days
+            except (KeyError, ValueError):
+                age_days = 9999
+            if (c.get("float") is not None and age_days < 30) or \
+               (c.get("float") is None and age_days < 1):
+                out[s] = c
+                continue
+        missing.append(s)
+
+    if missing:
+        async with _LF_FLOAT_LOCK:          # one yfinance batch at a time
+            fetched = await _lf_aio.to_thread(_lf_fetch_floats_sync, missing)
+        for s, r in fetched.items():
+            r["fetched_at"] = now.isoformat()
+            out[s] = r
+        cache.update({s: out[s] for s in missing})
+        try:
+            LF_FLOAT_CACHE.write_text(_lf_json.dumps(cache), encoding="utf-8")
+        except OSError:
+            pass
+    return out
+
+
+async def _lf_daily_bars(symbols: list, day: date) -> dict:
+    """Daily bars (lookback ~10 days through `day`) for many symbols in one call.
+    Returns {sym: {"prev_close": .., "day_open": .., "day_high": .., "day_low": ..,
+    "day_close": .., "day_volume": ..}} — day_* fields None if no bar for `day`."""
+    start  = datetime(day.year, day.month, day.day, tzinfo=NY) - _lf_td(days=12)
+    end    = datetime(day.year, day.month, day.day, 23, 59, tzinfo=NY)
+    params = {
+        "symbols":    ",".join(symbols),
+        "timeframe":  "1Day",
+        "start":      start.isoformat(),
+        "end":        end.isoformat(),
+        "limit":      10000,
+        "feed":       "iex",
+        "adjustment": "raw",
+    }
+    headers = {"APCA-API-KEY-ID": API_KEY, "APCA-API-SECRET-KEY": SECRET_KEY}
+    url     = f"{DATA_BASE}/v2/stocks/bars"
+    merged  = {}
+    async with httpx.AsyncClient(timeout=30, verify=False) as client:
+        while True:
+            r = await client.get(url, params=params, headers=headers)
+            if r.status_code != 200:
+                raise HTTPException(r.status_code, f"Alpaca error: {r.text}")
+            data = r.json()
+            for sym, blist in (data.get("bars") or {}).items():
+                merged.setdefault(sym, []).extend(blist)
+            token = data.get("next_page_token")
+            if not token:
+                break
+            params["page_token"] = token
+
+    out = {}
+    for sym in symbols:
+        day_bar, prev_close = None, None
+        for b in merged.get(sym, []):
+            b_day = datetime.fromisoformat(b["t"].replace("Z", "+00:00")).astimezone(NY).date()
+            if b_day == day:
+                day_bar = b
+            elif b_day < day:
+                prev_close = b["c"]
+        out[sym] = {
+            "prev_close": prev_close,
+            "day_open":   day_bar["o"] if day_bar else None,
+            "day_high":   day_bar["h"] if day_bar else None,
+            "day_low":    day_bar["l"] if day_bar else None,
+            "day_close":  day_bar["c"] if day_bar else None,
+            "day_volume": day_bar["v"] if day_bar else None,
+        }
+    return out
+
+
+@app.get("/api/lowfloat/meta")
+async def lowfloat_meta():
+    con = _lf_sql.connect(str(LF_DB_PATH))
+    try:
+        mn, mx, n = con.execute("SELECT MIN(ts), MAX(ts), COUNT(*) FROM alerts").fetchone()
+    finally:
+        con.close()
+    def _d(ts):
+        try:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(NY).date().isoformat()
+        except (ValueError, AttributeError):
+            return None
+    return {"min_date": _d(mn), "max_date": _d(mx), "total_rows": n}
+
+
+@app.get("/api/lowfloat/candidates")
+async def lowfloat_candidates(
+    day:           str,
+    max_float_m:   float = 3.0,    # float threshold, millions of shares
+    min_spike_pct: float = 10.0,   # day high vs prev close
+    top_n:         int   = 60,     # how many top-$-flow symbols to scan
+    max_price:     float = 0.0,    # 0 = no price filter (avg alert price)
+):
+    try:
+        d = date.fromisoformat(day)
+    except ValueError:
+        raise HTTPException(400, "day must be YYYY-MM-DD")
+
+    acts = _lf_day_activity(d)
+    if not acts:
+        return {"date": day, "total_active": 0, "scanned": 0, "candidates": []}
+    if max_price > 0:
+        acts = [a for a in acts if a["avg_price"] and a["avg_price"] <= max_price]
+
+    scanned = acts[:max(1, min(top_n, 200))]
+    syms    = [a["sym"] for a in scanned]
+
+    floats, daily = await _lf_aio.gather(_lf_get_floats(syms), _lf_daily_bars(syms, d))
+
+    candidates = []
+    for a in scanned:
+        f  = floats.get(a["sym"], {})
+        db = daily.get(a["sym"], {})
+        flt        = f.get("float")
+        float_m    = round(flt / 1e6, 3) if flt else None
+        prev_close = db.get("prev_close")
+        day_high   = db.get("day_high")
+        spike_pct  = round((day_high / prev_close - 1) * 100, 2) if (prev_close and day_high) else None
+        close_pct  = (round((db["day_close"] / prev_close - 1) * 100, 2)
+                      if (prev_close and db.get("day_close")) else None)
+        gap_pct    = (round((db["day_open"] / prev_close - 1) * 100, 2)
+                      if (prev_close and db.get("day_open")) else None)
+        candidates.append({
+            **a,
+            "name":         f.get("name") or "",
+            "float_m":      float_m,
+            "shares_out_m": round(f["shares_out"] / 1e6, 3) if f.get("shares_out") else None,
+            "prev_close":   prev_close,
+            "day_open":     db.get("day_open"),
+            "day_high":     day_high,
+            "day_close":    db.get("day_close"),
+            "day_volume":   db.get("day_volume"),
+            "spike_pct":    spike_pct,
+            "close_pct":    close_pct,
+            "gap_pct":      gap_pct,
+            "passes_float": float_m is not None and float_m <= max_float_m,
+            "passes_spike": spike_pct is not None and spike_pct >= min_spike_pct,
+        })
+
+    candidates.sort(key=lambda c: (not (c["passes_float"] and c["passes_spike"]),
+                                   -(c["dollar_flow"] or 0)))
+    return {
+        "date":          day,
+        "total_active":  len(acts),
+        "scanned":       len(scanned),
+        "passing":       sum(1 for c in candidates if c["passes_float"] and c["passes_spike"]),
+        "candidates":    candidates,
+    }
+
+
+def _lf_simulate(sym, bars, bar_times, baseline_px, spike_pct, entry_delta_pct,
+                 amount, sl_pct, trail_pct, entry_start_dt, entry_end_dt, exit_dt):
+    """Walk 1-min bars: trigger when high ≥ baseline×(1+spike%), enter at
+    baseline×(1+spike%+delta%) (or bar open if it gapped through). Exit on a
+    trailing stop: hard stop at entry×(1−sl%), ratcheted up to peak×(1−trail%)
+    as the stock makes new highs (peak updates AFTER the stop check each bar,
+    so a same-bar spike-and-dump can't trail itself out — conservative).
+    Also measures how far the move ran after the trigger (MFE)."""
+    trigger_level = baseline_px * (1 + spike_pct / 100.0)
+    entry_level   = baseline_px * (1 + (spike_pct + entry_delta_pct) / 100.0)
+
+    trigger_idx = entry_idx = None
+    entry_px = None
+    for i, (b, bt) in enumerate(zip(bars, bar_times)):
+        if bt < entry_start_dt:
+            continue
+        if bt > entry_end_dt:
+            break
+        if trigger_idx is None and b["h"] >= trigger_level:
+            trigger_idx = i
+        if trigger_idx is not None and b["h"] >= entry_level:
+            entry_idx = i
+            entry_px  = b["o"] if b["o"] >= entry_level else entry_level
+            break
+
+    # day-wide reference stats (independent of the trade)
+    sess = [(b, bt) for b, bt in zip(bars, bar_times) if bt >= entry_start_dt]
+    day_high = max((b["h"] for b, _ in sess), default=None)
+    day_high_ts = None
+    if day_high is not None:
+        for b, bt in sess:
+            if b["h"] >= day_high:
+                day_high_ts = bt
+                break
+    day_max_vs_baseline = (day_high / baseline_px - 1) * 100 if day_high else None
+
+    result = {
+        "sym":                 sym,
+        "baseline":            round(baseline_px, 4),
+        "trigger_level":       round(trigger_level, 4),
+        "entry_level":         round(entry_level, 4),
+        "triggered":           trigger_idx is not None,
+        "trigger_ts":          bar_times[trigger_idx].isoformat() if trigger_idx is not None else None,
+        "entered":             entry_idx is not None,
+        "day_high":            day_high,
+        "day_high_ts":         day_high_ts.isoformat() if day_high_ts else None,
+        "day_max_vs_baseline": round(day_max_vs_baseline, 2) if day_max_vs_baseline is not None else None,
+    }
+    if trigger_idx is not None:
+        post = [b["h"] for b, bt in zip(bars, bar_times)
+                if bt >= bar_times[trigger_idx] and bt >= entry_start_dt]
+        peak = max(post, default=trigger_level)
+        result["runup_after_trigger"] = round((peak / trigger_level - 1) * 100, 2)
+    else:
+        result["runup_after_trigger"] = None
+
+    if entry_idx is None:
+        return result
+
+    sl_px      = entry_px * (1 - sl_pct / 100.0)
+    trail_frac = (1 - trail_pct / 100.0) if trail_pct > 0 else None
+    shares   = amount / entry_px
+    entry_ts = bar_times[entry_idx]
+
+    exit_px = exit_reason = None
+    exit_idx = entry_idx
+    mfe_px, mae_px, mfe_ts = entry_px, entry_px, entry_ts
+    peak = entry_px                       # post-entry high the trail ratchets on
+    trail_curve = []                      # per-bar stop level, for the chart
+
+    for j in range(entry_idx, len(bars)):
+        b, bt = bars[j], bar_times[j]
+        if bt >= exit_dt:
+            exit_px, exit_reason, exit_idx = b["o"], "time", j
+            break
+        exit_idx = j
+        if b["h"] > mfe_px:
+            mfe_px, mfe_ts = b["h"], bt
+        mae_px = min(mae_px, b["l"])
+        if j == entry_idx:
+            # entry bar: only the hard stop below the fill can realistically hit
+            trail_curve.append([bt.isoformat(), round(sl_px, 4)])
+            if b["l"] <= sl_px:
+                exit_px, exit_reason = sl_px, "sl"
+                break
+            continue
+        stop_level = sl_px
+        if trail_frac is not None:
+            stop_level = max(sl_px, peak * trail_frac)
+        trail_curve.append([bt.isoformat(), round(stop_level, 4)])
+        if b["l"] <= stop_level:
+            exit_px     = b["o"] if b["o"] < stop_level else stop_level
+            exit_reason = "trail" if stop_level > sl_px else "sl"
+            break
+        if b["h"] > peak:                 # ratchet AFTER the stop check
+            peak = b["h"]
+
+    if exit_px is None:
+        exit_px, exit_reason = bars[exit_idx]["c"], "eod"
+
+    pnl_pct = (exit_px / entry_px - 1) * 100
+    result.update({
+        "entry_ts":     entry_ts.isoformat(),
+        "entry_price":  round(entry_px, 4),
+        "shares":       round(shares, 2),
+        "sl_price":     round(sl_px, 4),
+        "trail_curve":  trail_curve,
+        "exit_ts":      bar_times[exit_idx].isoformat(),
+        "exit_price":   round(exit_px, 4),
+        "exit_reason":  exit_reason,
+        "hold_min":     round((bar_times[exit_idx] - entry_ts).total_seconds() / 60, 1),
+        "pnl_pct":      round(pnl_pct, 2),
+        "pnl_dollar":   round(shares * (exit_px - entry_px), 2),
+        "mfe_pct":      round((mfe_px / entry_px - 1) * 100, 2),
+        "mae_pct":      round((mae_px / entry_px - 1) * 100, 2),
+        "mfe_ts":       mfe_ts.isoformat(),
+    })
+    return result
+
+
+@app.get("/api/lowfloat/backtest")
+async def lowfloat_backtest(
+    day:             str,
+    symbols:         str,
+    spike_pct:       float = 10.0,     # trigger: % above baseline
+    entry_delta_pct: float = 1.0,      # fill delta above the trigger
+    amount:          float = 1000.0,   # $ per trade
+    sl_pct:          float = 10.0,     # hard initial stop below entry
+    trail_pct:       float = 10.0,     # trailing stop off post-entry high; 0 = off
+    baseline:        str   = "prev_close",   # prev_close | day_open
+    entry_start:     str   = "09:30",
+    entry_end:       str   = "15:30",
+    exit_time:       str   = "15:55",
+    include_bars:    bool  = True,
+):
+    try:
+        d = date.fromisoformat(day)
+    except ValueError:
+        raise HTTPException(400, "day must be YYYY-MM-DD")
+    syms = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    if not syms:
+        raise HTTPException(400, "symbols required")
+    if len(syms) > 20:
+        raise HTTPException(400, "max 20 symbols per run")
+
+    entry_start_dt = _make_dt(d, entry_start, NY)
+    entry_end_dt   = _make_dt(d, entry_end, NY)
+    exit_dt        = _make_dt(d, exit_time, NY)
+
+    daily = await _lf_daily_bars(syms, d)
+
+    sem = _lf_aio.Semaphore(6)
+    bars_by_sym = {}
+
+    async def _fetch(sym):
+        async with sem:
+            try:
+                bars_by_sym[sym] = await fetch_bars(sym, d)
+            except HTTPException:
+                bars_by_sym[sym] = []
+
+    await _lf_aio.gather(*[_fetch(s) for s in syms])
+
+    results, series = [], {}
+    for sym in syms:
+        bars = bars_by_sym.get(sym) or []
+        if not bars:
+            results.append({"sym": sym, "error": "no 1-min bars for this day"})
+            continue
+        db = daily.get(sym, {})
+        baseline_px = db.get("prev_close") if baseline == "prev_close" else db.get("day_open")
+        used_baseline = baseline
+        if not baseline_px:                          # IPO / missing daily bar fallback
+            baseline_px = db.get("day_open") or bars[0]["o"]
+            used_baseline = "day_open(fallback)"
+        if not baseline_px or baseline_px <= 0:
+            results.append({"sym": sym, "error": "no baseline price"})
+            continue
+
+        bar_times = [datetime.fromisoformat(b["t"].replace("Z", "+00:00")).astimezone(NY)
+                     for b in bars]
+        r = _lf_simulate(sym, bars, bar_times, baseline_px, spike_pct, entry_delta_pct,
+                         amount, sl_pct, trail_pct, entry_start_dt, entry_end_dt, exit_dt)
+        r["baseline_mode"] = used_baseline
+        r["prev_close"]    = db.get("prev_close")
+        results.append(r)
+
+        if include_bars:
+            series[sym] = {
+                "t": [bt.isoformat() for bt in bar_times],
+                "c": [b["c"] for b in bars],
+                "h": [b["h"] for b in bars],
+                "l": [b["l"] for b in bars],
+                "v": [b["v"] for b in bars],
+            }
+
+    trades = [r for r in results if r.get("entered")]
+    triggered = [r for r in results if r.get("triggered")]
+
+    def _agg(rows):
+        n = len(rows)
+        if n == 0:
+            return {"n": 0}
+        wins = sum(1 for t in rows if t["pnl_dollar"] > 0)
+        mfes = [t["mfe_pct"] for t in rows]
+        return {
+            "n":            n,
+            "wins":         wins,
+            "win_rate":     round(100 * wins / n, 1),
+            "avg_pnl_pct":  round(sum(t["pnl_pct"] for t in rows) / n, 2),
+            "total_pnl":    round(sum(t["pnl_dollar"] for t in rows), 2),
+            "invested":     round(n * amount, 2),
+            "trail_hits":   sum(1 for t in rows if t["exit_reason"] == "trail"),
+            "sl_hits":      sum(1 for t in rows if t["exit_reason"] == "sl"),
+            "time_exits":   sum(1 for t in rows if t["exit_reason"] in ("time", "eod")),
+            "avg_hold_min": round(sum(t["hold_min"] for t in rows) / n, 1),
+            "avg_mfe_pct":  round(sum(mfes) / n, 2),
+            "med_mfe_pct":  round(_lf_stat.median(mfes), 2),
+            "max_mfe_pct":  round(max(mfes), 2),
+        }
+
+    runups = [r["runup_after_trigger"] for r in triggered
+              if r.get("runup_after_trigger") is not None]
+    buckets = [10, 25, 50, 100, 200]
+    runup_dist = [{"gte": b, "count": sum(1 for x in runups if x >= b)} for b in buckets]
+
+    return {
+        "date":        day,
+        "params": {
+            "spike_pct": spike_pct, "entry_delta_pct": entry_delta_pct, "amount": amount,
+            "sl_pct": sl_pct, "trail_pct": trail_pct, "baseline": baseline,
+            "entry_start": entry_start, "entry_end": entry_end, "exit_time": exit_time,
+        },
+        "n_symbols":   len(syms),
+        "n_triggered": len(triggered),
+        "n_trades":    len(trades),
+        "stats":       _agg(trades),
+        "avg_runup_after_trigger": round(sum(runups) / len(runups), 2) if runups else None,
+        "med_runup_after_trigger": round(_lf_stat.median(runups), 2) if runups else None,
+        "runup_distribution":      runup_dist,
+        "results":     results,
+        "series":      series,
+    }
+
+
+from lowfloat_page import LOWFLOAT_HTML
+
+@app.get("/lowfloat", response_class=HTMLResponse)
+async def lowfloat_page_route():
+    return HTMLResponse(LOWFLOAT_HTML)
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backtest_app:app", host="0.0.0.0", port=2222, reload=False)

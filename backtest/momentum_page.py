@@ -131,6 +131,7 @@ tr:hover td{background:#1a2035}
   <a href="/multiday">Multi-Day</a>
   <a href="/momentum" class="active">Momentum</a>
   <a href="/alerts">Alerts</a>
+  <a href="/lowfloat">Low Float</a>
 </div>
 
 <div class="container">

@@ -112,6 +112,7 @@ tr:hover td{background:#1c2128}
   <a class="nav-link" href="/multiday">&#128197; Multi-Day</a>
   <a class="nav-link" href="/momentum">&#9889; Momentum</a>
   <a class="nav-link" href="/alerts">&#128276; Alerts</a>
+  <a class="nav-link" href="/lowfloat">Low Float</a>
 </header>
 
 <div class="container">
