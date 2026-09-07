@@ -228,7 +228,7 @@
         <div class="box b-teal">
           <div class="label">Alert Log</div>
           <div class="title">POST /log/alert</div>
-          <div class="desc">Appends to <code>alerts_log.jsonl</code><br>only when alert fires</div>
+          <div class="desc">Inserts into <code>alerts.db</code> (SQLite)<br>only when alert fires</div>
         </div>
 
         <div style="margin-top:8px;">
@@ -372,7 +372,7 @@
 
       <div class="arrow-row"><span class="step s-green">3</span><b style="color:#d29922">Browser</b> computes VWAP 1m vs 2m every 5s<span class="arr">→</span>Δ% exceeds threshold<span class="arr">→</span>Alert fires</div>
 
-      <div class="arrow-row"><span class="step s-green">4</span>Alert fires<span class="arr">→</span><b style="color:#d29922">POST /log/alert</b><span class="arr">→</span><b style="color:#3fb950">alerts_log.jsonl</b> (disk, persists)</div>
+      <div class="arrow-row"><span class="step s-green">4</span>Alert fires<span class="arr">→</span><b style="color:#d29922">POST /log/alert</b><span class="arr">→</span><b style="color:#3fb950">alerts.db</b> → <code>alerts</code> table (SQLite, persists)</div>
 
       <div class="arrow-row"><span class="step s-green">5</span>User clicks ticker<span class="arr">→</span><b style="color:#d29922">GET /bars/{sym}</b><span class="arr">→</span>historical + live merged<span class="arr">→</span>Chart rendered</div>
 

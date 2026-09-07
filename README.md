@@ -68,6 +68,66 @@ Alpaca WebSocket (SIP)
    WebSocket broadcast → browser
 ```
 
+## Database (`alerts.db`)
+
+A single SQLite file next to `main.py`, created and migrated automatically on
+startup (`_init_db()`). It is gitignored — it is runtime data, not source.
+Journal mode is **WAL** so the dashboard can poll history while alerts are
+being written; every connection is opened with a 30 s busy timeout and closed
+when its request finishes.
+
+### `alerts` — one row per fired alert (permanent, never pruned)
+
+| Column      | Type      | Notes                                                  |
+|-------------|-----------|--------------------------------------------------------|
+| `id`        | INTEGER   | PK, autoincrement — also the newest-first sort key      |
+| `ts`        | TEXT      | ISO-8601, **normalised to UTC** server-side             |
+| `sym`       | TEXT      | Uppercased, validated against `^[A-Z][A-Z0-9.\-]{0,9}$` |
+| `tag`       | TEXT      | `new`, or the re-alert tag (max 32 chars)               |
+| `delta`     | REAL      | VWAP 1m vs 2m change, %                                 |
+| `value1m`   | REAL      | 1-minute dollar volume                                  |
+| `vwap1m`    | REAL      | 1-minute VWAP                                           |
+| `vwap2m`    | REAL      | 2-minute VWAP (baseline)                                |
+| `cnt1m`     | INTEGER   | Trade count in the last minute                          |
+| `direction` | TEXT      | `bull` / `bear` — derived from `delta` if not supplied  |
+
+Indexes: `idx_alerts_sym_id (sym, id DESC)` for per-ticker history,
+`idx_alerts_ts (ts)` for date-range reads.
+
+### `suppressed` — tickers muted by the user
+
+| Column       | Type    | Notes                                                    |
+|--------------|---------|----------------------------------------------------------|
+| `sym`        | TEXT    | PRIMARY KEY — re-suppressing a ticker replaces the row    |
+| `reason`     | TEXT    | Free text, max 200 chars                                  |
+| `expires_at` | TEXT    | `NULL` = forever; otherwise UTC ISO-8601                  |
+| `added_at`   | TEXT    | UTC ISO-8601                                              |
+
+Expired rows are purged on every `GET /suppressed`, so a suppression lapses
+even if the browser tab is stale. Index: `idx_supp_expires (expires_at)`.
+
+### Endpoints
+
+| Method   | Path                             | Behaviour                                                        |
+|----------|----------------------------------|------------------------------------------------------------------|
+| `POST`   | `/log/alert`                     | Insert one alert. Validates/coerces every field; `400` on bad input |
+| `GET`    | `/log/alerts?limit=&sym=`        | Newest-first history. `limit` 1–5000 (default 500), optional ticker filter. Returns `{alerts, total, limit}` |
+| `GET`    | `/suppressed`                    | Active suppressions only (purges expired)                        |
+| `POST`   | `/suppressed/{sym}`              | Body `{reason?, expires_at?}`; omit `expires_at` to mute forever |
+| `DELETE` | `/suppressed/{sym}`              | Un-suppress; reports `removed` count                             |
+
+All payloads come from the browser, so tickers, numbers and timestamps are
+validated server-side — NaN/∞ are stored as `NULL`, unparseable timestamps fall
+back to the server clock, and a malformed ticker is rejected rather than
+written.
+
+**Schema migrations:** `_init_db()` adds any columns an older `alerts.db` is
+missing (`ALTER TABLE … ADD COLUMN`) and creates missing indexes, so upgrading
+in place preserves existing rows. Backing up is just copying `alerts.db`
+(plus `alerts.db-wal` if the app is running).
+
+---
+
 ## Notes
 
 - Uses **SIP** (consolidated tape) feed. If you only have an IEX entitlement, change `DataFeed.SIP` → `DataFeed.IEX` in `main.py`.
