@@ -2008,14 +2008,14 @@ async function fetchAlertHistory() {
   try {
     const res  = await fetch('/log/alerts');
     const data = await res.json();
-    renderAlertHistory(data.alerts || []);
+    renderAlertHistory(data.alerts || [], data.total);
   } catch {
     document.getElementById('histBody').innerHTML =
       '<tr><td colspan="7" class="hist-empty">Failed to load history.</td></tr>';
   }
 }
 
-function renderAlertHistory(alerts) {
+function renderAlertHistory(alerts, total) {
   const tbody = document.getElementById('histBody');
   if (!alerts.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="hist-empty">No alerts recorded yet.</td></tr>';
@@ -2023,10 +2023,9 @@ function renderAlertHistory(alerts) {
     return;
   }
 
-  // Show newest first
-  const sorted = [...alerts].reverse();
-  const frag   = document.createDocumentFragment();
-  for (const a of sorted) {
+  // /log/alerts already returns newest-first (ORDER BY id DESC) — don't reverse it
+  const frag = document.createDocumentFragment();
+  for (const a of alerts) {
     const bull  = a.direction === 'bull';
     const ts    = a.ts ? new Date(a.ts) : null;
     const time  = ts
@@ -2050,8 +2049,11 @@ function renderAlertHistory(alerts) {
     frag.appendChild(tr);
   }
   tbody.replaceChildren(frag);
+  const shown = (total != null && total > alerts.length)
+    ? `${alerts.length} of ${total} alerts`
+    : `${alerts.length} alerts`;
   document.getElementById('histFooter').textContent =
-    `${alerts.length} alerts · refreshed ${new Date().toTimeString().slice(0,8)}`;
+    `${shown} · refreshed ${new Date().toTimeString().slice(0,8)}`;
   _histLoaded = true;
 }
 

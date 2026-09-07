@@ -27,6 +27,7 @@ import sys
 import threading
 import time
 from collections import deque
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from queue import Empty, Queue
@@ -414,35 +415,206 @@ def load_yesterday_volume() -> None:
     except Exception as exc:
         print(f"[yesterday] ⚠ failed to load: {exc}")
 
-ALERTS_DB = Path(__file__).parent / "alerts.db"  # SQLite — permanent, no file-locking issues
+ALERTS_DB      = Path(__file__).parent / "alerts.db"  # SQLite — no file-locking issues
+DB_TIMEOUT_S   = 30.0    # wait this long for a competing writer before erroring
+MAX_ALERT_ROWS = 5000    # hard ceiling on rows returned by /log/alerts
+
+# Retention for the alerts table. 0 (the default) keeps every alert forever,
+# which is the historical behaviour — set ALERT_RETENTION_DAYS in .env to opt in.
+try:
+    ALERT_RETENTION_DAYS = max(0, int(os.getenv("ALERT_RETENTION_DAYS", "0")))
+except ValueError:
+    ALERT_RETENTION_DAYS = 0
+    print("[alert-db] ⚠ ALERT_RETENTION_DAYS is not an integer — keeping alerts forever")
+
+# Canonical schema — used both to create fresh DBs and to migrate older ones.
+ALERT_COLUMNS = {
+    "ts":        "TEXT",
+    "sym":       "TEXT",
+    "tag":       "TEXT",
+    "delta":     "REAL",
+    "value1m":   "REAL",
+    "vwap1m":    "REAL",
+    "vwap2m":    "REAL",
+    "cnt1m":     "INTEGER",
+    "direction": "TEXT",
+}
+SUPPRESSED_COLUMNS = {
+    "reason":     "TEXT DEFAULT ''",
+    "expires_at": "TEXT",
+    "added_at":   "TEXT",
+}
+
+
+@contextmanager
+def _db():
+    """
+    Open a SQLite connection with sane concurrency settings, commit on success,
+    roll back on error, and — importantly — always close it.
+
+    `with sqlite3.connect(...)` alone only wraps the *transaction*; the handle
+    stays open until GC, which leaks file descriptors when every request opens
+    its own connection from the thread pool.
+    """
+    conn = sqlite3.connect(ALERTS_DB, timeout=DB_TIMEOUT_S)
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute(f"PRAGMA busy_timeout = {int(DB_TIMEOUT_S * 1000)}")
+        conn.execute("PRAGMA synchronous = NORMAL")   # WAL-safe, much faster than FULL
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _ensure_columns(conn: sqlite3.Connection, table: str, columns: dict[str, str]) -> None:
+    """Add any columns an older alerts.db is missing (forward-only migration)."""
+    have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+    for name, decl in columns.items():
+        if name not in have:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+            print(f"[alert-db] migrated: added {table}.{name}")
+
 
 def _init_db() -> None:
-    """Create the alerts table if it doesn't exist."""
-    with sqlite3.connect(ALERTS_DB) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS alerts (
-                id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                ts        TEXT,
-                sym       TEXT,
-                tag       TEXT,
-                delta     REAL,
-                value1m   REAL,
-                vwap1m    REAL,
-                vwap2m    REAL,
-                cnt1m     INTEGER,
-                direction TEXT
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS suppressed (
-                sym        TEXT PRIMARY KEY,
-                reason     TEXT DEFAULT '',
-                expires_at TEXT,          -- NULL = forever, ISO date string = until that date
-                added_at   TEXT
-            )
-        """)
-        conn.commit()
-    print(f"[alert-db] ✅ database ready → {ALERTS_DB}")
+    """Create/migrate the alerts + suppressed tables and their indexes."""
+    try:
+        with _db() as conn:
+            # WAL keeps readers from blocking the writer (the dashboard polls
+            # /log/alerts while alerts are being written). It is a persistent
+            # property of the file, so setting it once here is enough.
+            mode = conn.execute("PRAGMA journal_mode = WAL").fetchone()[0]
+
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS alerts (
+                    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ts        TEXT,
+                    sym       TEXT,
+                    tag       TEXT,
+                    delta     REAL,
+                    value1m   REAL,
+                    vwap1m    REAL,
+                    vwap2m    REAL,
+                    cnt1m     INTEGER,
+                    direction TEXT
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS suppressed (
+                    sym        TEXT PRIMARY KEY,
+                    reason     TEXT DEFAULT '',
+                    expires_at TEXT,          -- NULL = forever, ISO date string = until that date
+                    added_at   TEXT
+                )
+            """)
+            _ensure_columns(conn, "alerts", ALERT_COLUMNS)
+            _ensure_columns(conn, "suppressed", SUPPRESSED_COLUMNS)
+
+            # Indexes for the queries the dashboard actually issues.
+            # (sym, id DESC) matches "WHERE sym=? ORDER BY id DESC" exactly, so
+            # the per-ticker history needs no sort; (ts) serves date-range reads.
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_sym_id ON alerts (sym, id DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_ts     ON alerts (ts)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_supp_expires  ON suppressed (expires_at)")
+            conn.execute("DROP INDEX IF EXISTS idx_alerts_sym_ts")   # superseded by idx_alerts_sym_id
+
+            n_alerts = conn.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
+            n_supp   = conn.execute("SELECT COUNT(*) FROM suppressed").fetchone()[0]
+
+        print(f"[alert-db] ✅ database ready → {ALERTS_DB} "
+              f"(journal={mode}, {n_alerts:,} alerts, {n_supp} suppressed)")
+    except Exception as exc:
+        print(f"[alert-db] ❌ init failed: {exc}")
+
+
+# ── Retention ─────────────────────────────────────────────────────────────────
+def _prune_alerts_sync() -> int:
+    """
+    Delete alerts older than ALERT_RETENTION_DAYS. Returns the number removed.
+    A retention of 0 disables pruning entirely.
+
+    Rows with a NULL ts are never touched: `ts < ?` is NULL for them, and they
+    predate the server-side timestamp fallback, so their age is unknown.
+    """
+    if ALERT_RETENTION_DAYS <= 0:
+        return 0
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=ALERT_RETENTION_DAYS)).isoformat()
+    try:
+        with _db() as conn:
+            # Uses idx_alerts_ts; ts is stored as canonical UTC so a string
+            # comparison against a UTC cutoff is well-ordered.
+            removed = conn.execute("DELETE FROM alerts WHERE ts < ?", (cutoff,)).rowcount
+
+        if removed:
+            # Reclaim the freed pages — deletes alone leave the file the same size.
+            # Runs on its own connection: VACUUM cannot execute inside a transaction.
+            with _db() as conn:
+                conn.execute("VACUUM")
+            print(f"[alert-db] pruned {removed:,} alert(s) older than "
+                  f"{ALERT_RETENTION_DAYS}d (before {cutoff[:10]})")
+        return removed
+    except Exception as exc:
+        print(f"[alert-db] ⚠ prune failed: {exc}")
+        return 0
+
+
+async def alert_pruner() -> None:
+    """Background task: apply the retention policy at startup, then daily."""
+    if ALERT_RETENTION_DAYS <= 0:
+        print("[alert-db] retention disabled — alerts kept forever "
+              "(set ALERT_RETENTION_DAYS to change)")
+        return
+    print(f"[alert-db] retention: {ALERT_RETENTION_DAYS} days")
+    while True:
+        await asyncio.to_thread(_prune_alerts_sync)
+        await asyncio.sleep(24 * 60 * 60)
+
+
+# ── Field coercion / validation ───────────────────────────────────────────────
+SYM_RE = re.compile(r"^[A-Z][A-Z0-9.\-]{0,9}$")
+
+
+def _num(value, cast):
+    """Coerce a JSON field to int/float, or None if it isn't a usable number."""
+    if value is None or value == "":
+        return None
+    try:
+        out = cast(value)
+    except (TypeError, ValueError):
+        return None
+    return out if out == out and abs(out) != float("inf") else None   # drop NaN/inf
+
+
+def _clean_sym(sym) -> str | None:
+    """Normalise a ticker; return None if it can't be one."""
+    if not isinstance(sym, str):
+        return None
+    sym = sym.strip().upper()
+    return sym if SYM_RE.match(sym) else None
+
+
+def _utc_iso(ts) -> str | None:
+    """
+    Parse an ISO-8601 timestamp and re-emit it as canonical UTC, or None if it
+    isn't a timestamp.
+
+    Normalising matters: timestamps are stored as TEXT and compared as strings
+    (`expires_at <= ?`, `ORDER BY ts`), so a value carrying a non-UTC offset —
+    or none at all — would sort and compare wrongly against UTC rows.
+    """
+    if not isinstance(ts, str) or not ts.strip():
+        return None
+    try:
+        dt = datetime.fromisoformat(ts.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)   # naive input: assume UTC
+    return dt.astimezone(timezone.utc).isoformat()
 
 # ── EOD volume saver ──────────────────────────────────────────────────────────
 def _save_daily_volume_sync() -> None:
@@ -1016,65 +1188,148 @@ async def get_news_route(sym: str) -> JSONResponse:
 
 
 # ── Alert log (SQLite — permanent storage, no OneDrive locking issues) ────────
-def _write_alert(body: dict) -> None:
-    """Insert one alert row into SQLite (runs in thread pool)."""
-    with sqlite3.connect(ALERTS_DB) as conn:
+def _write_alert(row: tuple) -> bool:
+    """
+    Insert one already-validated alert row (runs in thread pool). Returns False
+    without writing if the ticker is actively suppressed.
+
+    The browser filters suppressed tickers before it ever calls /log/alert, but
+    a tab that hasn't refreshed its suppression list would otherwise keep
+    writing rows for a muted ticker. The check and the insert share one
+    connection so they see the same snapshot.
+    """
+    sym = row[1]
+    now = datetime.now(timezone.utc).isoformat()
+    with _db() as conn:
+        muted = conn.execute(
+            "SELECT 1 FROM suppressed WHERE sym = ? AND (expires_at IS NULL OR expires_at > ?)",
+            (sym, now),
+        ).fetchone()
+        if muted:
+            return False
         conn.execute(
             "INSERT INTO alerts (ts,sym,tag,delta,value1m,vwap1m,vwap2m,cnt1m,direction) "
             "VALUES (?,?,?,?,?,?,?,?,?)",
-            (
-                body.get("ts"),
-                body.get("sym"),
-                body.get("tag", "new"),
-                body.get("delta"),
-                body.get("value1m"),
-                body.get("vwap1m"),
-                body.get("vwap2m"),
-                body.get("cnt1m"),
-                body.get("direction"),
-            ),
+            row,
         )
-        conn.commit()
-    print(f"[alert-db] saved {body.get('tag','new')} alert for ${body.get('sym')}")
+    return True
 
 
 @app.post("/log/alert")
 async def log_alert(request: Request) -> JSONResponse:
+    """
+    Persist one alert. The payload comes from the browser, so every field is
+    validated/coerced here — a bad ticker or a NaN must never reach the table.
+    """
     try:
         body = await request.json()
-        await asyncio.to_thread(_write_alert, body)
-        return JSONResponse({"ok": True})
+    except Exception:
+        return JSONResponse({"ok": False, "error": "invalid JSON body"}, status_code=400)
+    if not isinstance(body, dict):
+        return JSONResponse({"ok": False, "error": "body must be an object"}, status_code=400)
+
+    sym = _clean_sym(body.get("sym"))
+    if not sym:
+        return JSONResponse({"ok": False, "error": f"invalid sym: {body.get('sym')!r}"},
+                            status_code=400)
+
+    delta = _num(body.get("delta"), float)
+    # Trust the server clock — browser clocks drift and break time ordering.
+    ts    = _utc_iso(body.get("ts")) or datetime.now(timezone.utc).isoformat()
+    tag   = str(body.get("tag") or "new")[:32]
+
+    direction = body.get("direction")
+    if direction not in ("bull", "bear"):
+        direction = None if delta is None else ("bull" if delta > 0 else "bear")
+
+    row = (
+        ts, sym, tag, delta,
+        _num(body.get("value1m"), float),
+        _num(body.get("vwap1m"),  float),
+        _num(body.get("vwap2m"),  float),
+        _num(body.get("cnt1m"),   int),
+        direction,
+    )
+
+    try:
+        written = await asyncio.to_thread(_write_alert, row)
     except Exception as exc:
         print(f"[alert-db] ❌ write failed: {exc}")
-        return JSONResponse({"ok": False, "error": str(exc)})
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
+    if not written:
+        print(f"[alert-db] skipped {tag} alert for ${sym} — suppressed")
+        return JSONResponse({"ok": True, "sym": sym, "suppressed": True, "written": False})
+
+    print(f"[alert-db] saved {tag} alert for ${sym}")
+    return JSONResponse({"ok": True, "sym": sym, "ts": ts, "written": True})
 
 
 @app.get("/log/alerts")
-async def get_alert_log() -> JSONResponse:
-    try:
-        def _read() -> list[dict]:
-            with sqlite3.connect(ALERTS_DB) as conn:
-                conn.row_factory = sqlite3.Row
-                rows = conn.execute(
-                    "SELECT * FROM alerts ORDER BY id DESC LIMIT 500"
-                ).fetchall()
-            return [dict(r) for r in rows]
+async def get_alert_log(limit: int = 500, sym: str | None = None) -> JSONResponse:
+    """
+    Newest-first alert history. `limit` (1–5000) pages the history tab back
+    further than the previous hard-coded 500; `sym` filters to one ticker.
+    """
+    limit = max(1, min(int(limit), MAX_ALERT_ROWS))
+    want  = _clean_sym(sym) if sym else None
+    if sym and not want:
+        return JSONResponse({"alerts": [], "error": f"invalid sym: {sym!r}"}, status_code=400)
 
-        alerts = await asyncio.to_thread(_read)
-        return JSONResponse({"alerts": alerts})
+    try:
+        def _read() -> tuple[list[dict], int]:
+            with _db() as conn:
+                if want:
+                    rows = conn.execute(
+                        "SELECT * FROM alerts WHERE sym = ? ORDER BY id DESC LIMIT ?",
+                        (want, limit),
+                    ).fetchall()
+                    total = conn.execute(
+                        "SELECT COUNT(*) FROM alerts WHERE sym = ?", (want,)
+                    ).fetchone()[0]
+                else:
+                    rows = conn.execute(
+                        "SELECT * FROM alerts ORDER BY id DESC LIMIT ?", (limit,)
+                    ).fetchall()
+                    total = conn.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
+            return [dict(r) for r in rows], total
+
+        alerts, total = await asyncio.to_thread(_read)
+        return JSONResponse({"alerts": alerts, "total": total, "limit": limit})
     except Exception as exc:
         print(f"[alert-db] ❌ read failed: {exc}")
-        return JSONResponse({"alerts": [], "error": str(exc)})
+        return JSONResponse({"alerts": [], "error": str(exc)}, status_code=500)
 
 
 # ── Suppressed stocks endpoints ───────────────────────────────────────────────
 @app.get("/suppressed")
 async def get_suppressed() -> JSONResponse:
+    """
+    Active suppressions only. Expired rows are dropped from the table here so
+    the list can't silently grow forever, and so an expired ticker starts
+    alerting again even if the browser tab is stale.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+
     def _read():
-        with sqlite3.connect(ALERTS_DB) as conn:
-            conn.row_factory = sqlite3.Row
-            return [dict(r) for r in conn.execute("SELECT * FROM suppressed ORDER BY added_at DESC").fetchall()]
-    rows = await asyncio.to_thread(_read)
+        with _db() as conn:
+            purged = conn.execute(
+                "DELETE FROM suppressed WHERE expires_at IS NOT NULL AND expires_at <= ?",
+                (now,),
+            ).rowcount
+            rows = conn.execute(
+                "SELECT * FROM suppressed ORDER BY added_at DESC"
+            ).fetchall()
+        return [dict(r) for r in rows], purged
+
+    try:
+        rows, purged = await asyncio.to_thread(_read)
+    except Exception as exc:
+        print(f"[alert-db] ❌ suppressed read failed: {exc}")
+        return JSONResponse({"suppressed": [], "error": str(exc)}, status_code=500)
+
+    if purged:
+        print(f"[alert-db] purged {purged} expired suppression(s)")
     return JSONResponse({"suppressed": rows})
 
 
@@ -1085,31 +1340,61 @@ async def add_suppressed(sym: str, request: Request) -> JSONResponse:
         body = await request.json()
     except Exception:
         pass
-    sym = sym.upper().strip()
-    reason     = body.get("reason", "")
-    expires_at = body.get("expires_at")   # None = forever, or ISO date string
-    added_at   = datetime.now(timezone.utc).isoformat()
+    if not isinstance(body, dict):
+        body = {}
+
+    clean = _clean_sym(sym)
+    if not clean:
+        return JSONResponse({"ok": False, "error": f"invalid sym: {sym!r}"}, status_code=400)
+
+    reason = str(body.get("reason") or "")[:200]
+
+    # None/absent = suppress forever; anything else must be a real timestamp.
+    raw_expiry = body.get("expires_at")
+    expires_at = None
+    if raw_expiry is not None:
+        expires_at = _utc_iso(raw_expiry)
+        if not expires_at:
+            return JSONResponse(
+                {"ok": False, "error": f"expires_at is not ISO-8601: {raw_expiry!r}"},
+                status_code=400,
+            )
+
+    added_at = datetime.now(timezone.utc).isoformat()
 
     def _write():
-        with sqlite3.connect(ALERTS_DB) as conn:
+        with _db() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO suppressed (sym, reason, expires_at, added_at) VALUES (?,?,?,?)",
-                (sym, reason, expires_at, added_at),
+                (clean, reason, expires_at, added_at),
             )
-            conn.commit()
-    await asyncio.to_thread(_write)
-    return JSONResponse({"ok": True, "sym": sym})
+
+    try:
+        await asyncio.to_thread(_write)
+    except Exception as exc:
+        print(f"[alert-db] ❌ suppress failed: {exc}")
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
+    return JSONResponse({"ok": True, "sym": clean, "expires_at": expires_at})
 
 
 @app.delete("/suppressed/{sym}")
 async def remove_suppressed(sym: str) -> JSONResponse:
-    sym = sym.upper().strip()
-    def _delete():
-        with sqlite3.connect(ALERTS_DB) as conn:
-            conn.execute("DELETE FROM suppressed WHERE sym = ?", (sym,))
-            conn.commit()
-    await asyncio.to_thread(_delete)
-    return JSONResponse({"ok": True, "sym": sym})
+    clean = _clean_sym(sym)
+    if not clean:
+        return JSONResponse({"ok": False, "error": f"invalid sym: {sym!r}"}, status_code=400)
+
+    def _delete() -> int:
+        with _db() as conn:
+            return conn.execute("DELETE FROM suppressed WHERE sym = ?", (clean,)).rowcount
+
+    try:
+        removed = await asyncio.to_thread(_delete)
+    except Exception as exc:
+        print(f"[alert-db] ❌ unsuppress failed: {exc}")
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
+    return JSONResponse({"ok": True, "sym": clean, "removed": removed})
 
 
 # ── Universe / momentum endpoints ─────────────────────────────────────────────
@@ -1162,6 +1447,7 @@ async def startup() -> None:
     load_yesterday_volume()
     asyncio.create_task(queue_processor())
     asyncio.create_task(eod_saver())
+    asyncio.create_task(alert_pruner())
     asyncio.create_task(_refresh_etf_exclude())   # fetch live ETF list in background
     threading.Thread(target=run_trade_stream,    daemon=True).start()
     threading.Thread(target=run_news_stream,     daemon=True).start()
