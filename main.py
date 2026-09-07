@@ -415,9 +415,17 @@ def load_yesterday_volume() -> None:
     except Exception as exc:
         print(f"[yesterday] ⚠ failed to load: {exc}")
 
-ALERTS_DB      = Path(__file__).parent / "alerts.db"  # SQLite — permanent, no file-locking issues
+ALERTS_DB      = Path(__file__).parent / "alerts.db"  # SQLite — no file-locking issues
 DB_TIMEOUT_S   = 30.0    # wait this long for a competing writer before erroring
 MAX_ALERT_ROWS = 5000    # hard ceiling on rows returned by /log/alerts
+
+# Retention for the alerts table. 0 (the default) keeps every alert forever,
+# which is the historical behaviour — set ALERT_RETENTION_DAYS in .env to opt in.
+try:
+    ALERT_RETENTION_DAYS = max(0, int(os.getenv("ALERT_RETENTION_DAYS", "0")))
+except ValueError:
+    ALERT_RETENTION_DAYS = 0
+    print("[alert-db] ⚠ ALERT_RETENTION_DAYS is not an integer — keeping alerts forever")
 
 # Canonical schema — used both to create fresh DBs and to migrate older ones.
 ALERT_COLUMNS = {
@@ -520,6 +528,50 @@ def _init_db() -> None:
               f"(journal={mode}, {n_alerts:,} alerts, {n_supp} suppressed)")
     except Exception as exc:
         print(f"[alert-db] ❌ init failed: {exc}")
+
+
+# ── Retention ─────────────────────────────────────────────────────────────────
+def _prune_alerts_sync() -> int:
+    """
+    Delete alerts older than ALERT_RETENTION_DAYS. Returns the number removed.
+    A retention of 0 disables pruning entirely.
+
+    Rows with a NULL ts are never touched: `ts < ?` is NULL for them, and they
+    predate the server-side timestamp fallback, so their age is unknown.
+    """
+    if ALERT_RETENTION_DAYS <= 0:
+        return 0
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=ALERT_RETENTION_DAYS)).isoformat()
+    try:
+        with _db() as conn:
+            # Uses idx_alerts_ts; ts is stored as canonical UTC so a string
+            # comparison against a UTC cutoff is well-ordered.
+            removed = conn.execute("DELETE FROM alerts WHERE ts < ?", (cutoff,)).rowcount
+
+        if removed:
+            # Reclaim the freed pages — deletes alone leave the file the same size.
+            # Runs on its own connection: VACUUM cannot execute inside a transaction.
+            with _db() as conn:
+                conn.execute("VACUUM")
+            print(f"[alert-db] pruned {removed:,} alert(s) older than "
+                  f"{ALERT_RETENTION_DAYS}d (before {cutoff[:10]})")
+        return removed
+    except Exception as exc:
+        print(f"[alert-db] ⚠ prune failed: {exc}")
+        return 0
+
+
+async def alert_pruner() -> None:
+    """Background task: apply the retention policy at startup, then daily."""
+    if ALERT_RETENTION_DAYS <= 0:
+        print("[alert-db] retention disabled — alerts kept forever "
+              "(set ALERT_RETENTION_DAYS to change)")
+        return
+    print(f"[alert-db] retention: {ALERT_RETENTION_DAYS} days")
+    while True:
+        await asyncio.to_thread(_prune_alerts_sync)
+        await asyncio.sleep(24 * 60 * 60)
 
 
 # ── Field coercion / validation ───────────────────────────────────────────────
@@ -1136,14 +1188,31 @@ async def get_news_route(sym: str) -> JSONResponse:
 
 
 # ── Alert log (SQLite — permanent storage, no OneDrive locking issues) ────────
-def _write_alert(row: tuple) -> None:
-    """Insert one already-validated alert row into SQLite (runs in thread pool)."""
+def _write_alert(row: tuple) -> bool:
+    """
+    Insert one already-validated alert row (runs in thread pool). Returns False
+    without writing if the ticker is actively suppressed.
+
+    The browser filters suppressed tickers before it ever calls /log/alert, but
+    a tab that hasn't refreshed its suppression list would otherwise keep
+    writing rows for a muted ticker. The check and the insert share one
+    connection so they see the same snapshot.
+    """
+    sym = row[1]
+    now = datetime.now(timezone.utc).isoformat()
     with _db() as conn:
+        muted = conn.execute(
+            "SELECT 1 FROM suppressed WHERE sym = ? AND (expires_at IS NULL OR expires_at > ?)",
+            (sym, now),
+        ).fetchone()
+        if muted:
+            return False
         conn.execute(
             "INSERT INTO alerts (ts,sym,tag,delta,value1m,vwap1m,vwap2m,cnt1m,direction) "
             "VALUES (?,?,?,?,?,?,?,?,?)",
             row,
         )
+    return True
 
 
 @app.post("/log/alert")
@@ -1183,13 +1252,17 @@ async def log_alert(request: Request) -> JSONResponse:
     )
 
     try:
-        await asyncio.to_thread(_write_alert, row)
+        written = await asyncio.to_thread(_write_alert, row)
     except Exception as exc:
         print(f"[alert-db] ❌ write failed: {exc}")
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
 
+    if not written:
+        print(f"[alert-db] skipped {tag} alert for ${sym} — suppressed")
+        return JSONResponse({"ok": True, "sym": sym, "suppressed": True, "written": False})
+
     print(f"[alert-db] saved {tag} alert for ${sym}")
-    return JSONResponse({"ok": True, "sym": sym, "ts": ts})
+    return JSONResponse({"ok": True, "sym": sym, "ts": ts, "written": True})
 
 
 @app.get("/log/alerts")
@@ -1374,6 +1447,7 @@ async def startup() -> None:
     load_yesterday_volume()
     asyncio.create_task(queue_processor())
     asyncio.create_task(eod_saver())
+    asyncio.create_task(alert_pruner())
     asyncio.create_task(_refresh_etf_exclude())   # fetch live ETF list in background
     threading.Thread(target=run_trade_stream,    daemon=True).start()
     threading.Thread(target=run_news_stream,     daemon=True).start()

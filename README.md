@@ -76,7 +76,7 @@ Journal mode is **WAL** so the dashboard can poll history while alerts are
 being written; every connection is opened with a 30 s busy timeout and closed
 when its request finishes.
 
-### `alerts` — one row per fired alert (permanent, never pruned)
+### `alerts` — one row per fired alert
 
 | Column      | Type      | Notes                                                  |
 |-------------|-----------|--------------------------------------------------------|
@@ -120,6 +120,25 @@ All payloads come from the browser, so tickers, numbers and timestamps are
 validated server-side — NaN/∞ are stored as `NULL`, unparseable timestamps fall
 back to the server clock, and a malformed ticker is rejected rather than
 written.
+
+**Suppression is enforced on write, not just in the UI.** `POST /log/alert`
+checks the `suppressed` table before inserting, so a browser tab holding a
+stale suppression list can't log alerts for a muted ticker. A skipped alert
+still returns `200` — `{"ok": true, "suppressed": true, "written": false}` —
+so the caller can tell it was muted rather than failed.
+
+### Retention
+
+`alerts` keeps everything by default. Set `ALERT_RETENTION_DAYS` in `.env` to
+opt into pruning:
+
+```
+ALERT_RETENTION_DAYS=90     # 0 or unset = keep forever
+```
+
+A background task prunes at startup and once every 24 h, then `VACUUM`s to
+actually give the disk space back. Rows with a `NULL` ts are never pruned —
+their age is unknown, so they're left alone.
 
 **Schema migrations:** `_init_db()` adds any columns an older `alerts.db` is
 missing (`ALTER TABLE … ADD COLUMN`) and creates missing indexes, so upgrading
